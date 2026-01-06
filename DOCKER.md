@@ -13,8 +13,8 @@ docker build -t puppet-resume .
 ```bash
 docker run -d \
   --name resume-generator \
-  -p 3000:3000 \
-  -e PORT=3000 \
+  -p 80:80 \
+  -e PORT=80 \
   puppet-resume
 ```
 
@@ -28,10 +28,10 @@ docker-compose up -d
 
 ```bash
 # 健康检查
-curl http://localhost:3000/health
+curl http://localhost:80/health
 
 # 生成简历 PDF（示例）
-curl -X POST http://localhost:3000/api/generate \
+curl -X POST http://localhost:80/api/generate \
   -H "Content-Type: application/json" \
   -d '{
     "name": "张三",
@@ -57,14 +57,15 @@ curl -X POST http://localhost:3000/api/generate \
 
 ## 环境变量
 
-- `PORT`: 服务端口（默认: 3000）
+- `PORT`: 服务端口（默认: 80）
+  - ⚠️ 微信云托管强制要求监听 80 端口
 - `NODE_ENV`: 运行环境（默认: production）
 
 ## 注意事项
 
 1. **内存要求**: Puppeteer 需要较多内存，建议至少 1GB
 2. **Chrome 依赖**: 镜像已包含 Chrome 和所需字体库
-3. **端口映射**: 确保主机端口 3000 未被占用
+3. **端口映射**: 确保主机端口 80 未被占用
 
 ## 微信云托管部署
 
@@ -73,6 +74,7 @@ curl -X POST http://localhost:3000/api/generate \
 1. 将 Dockerfile 放在项目根目录
 2. 在云托管控制台配置：
    - 构建命令: `docker build -t resume .`
-   - 启动命令: `docker run -p 80:3000 resume`
-   - 环境变量: `PORT=3000`
+   - 启动命令: `docker run -p 80:80 resume`
+   - 环境变量: `PORT=80`
+   - ⚠️ 微信云托管强制要求监听 80 端口
 

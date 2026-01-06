@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import multer, { FileFilterCallback, Multer } from 'multer';
+import multer, { FileFilterCallback } from 'multer';
 import { ResumeGenerator } from './resumeGenerator';
 import { ResumeData } from './types';
 
@@ -118,7 +118,8 @@ app.get('/health', (req: Request, res: Response) => {
 /**
  * 启动服务器
  */
-const PORT = process.env.PORT || 3000;
+// ⚠️ 微信云托管强制要求监听 80 端口
+const PORT = process.env.PORT || 80;
 
 app.listen(PORT, () => {
   console.log(`简历生成服务已启动，端口: ${PORT}`);

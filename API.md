@@ -60,7 +60,7 @@
 
 **cURL 示例：**
 ```bash
-curl -X POST http://localhost:3000/api/generate \
+curl -X POST http://localhost:80/api/generate \
   -F "resumeData={\"name\":\"张三\",\"position\":\"前端开发工程师\",...}" \
   -F "avatar=@/path/to/avatar.jpg"
 ```
@@ -75,7 +75,7 @@ formData.append('resumeData', JSON.stringify({
 }));
 formData.append('avatar', fileInput.files[0]);
 
-fetch('http://localhost:3000/api/generate', {
+fetch('http://localhost:80/api/generate', {
   method: 'POST',
   body: formData
 })
@@ -122,7 +122,8 @@ fetch('http://localhost:3000/api/generate', {
 ## 微信云托管部署
 
 ### 环境变量
-- `PORT`: 服务端口（默认: 3000）
+- `PORT`: 服务端口（默认: 80）
+  - ⚠️ 微信云托管强制要求监听 80 端口
 
 ### Dockerfile 示例
 ```dockerfile
@@ -135,7 +136,8 @@ RUN npm ci --only=production
 
 COPY dist ./dist
 
-EXPOSE 3000
+# ⚠️ 微信云托管强制要求监听 80 端口
+EXPOSE 80
 
 CMD ["node", "dist/server.js"]
 ```

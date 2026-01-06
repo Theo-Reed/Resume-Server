@@ -6,10 +6,10 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "80:80"  # ⚠️ 微信云托管强制要求监听 80 端口
     environment:
       - NODE_ENV=production
-      - PORT=3000
+      - PORT=80  # ⚠️ 微信云托管强制要求监听 80 端口
     restart: unless-stopped
     # 如果需要限制资源使用，可以取消下面的注释
     # deploy:
