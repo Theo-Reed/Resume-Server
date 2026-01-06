@@ -60,7 +60,7 @@ WORKDIR /app
 
 # 6. 复制并安装依赖（包括开发依赖，用于构建）
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # 7. 复制源码并构建 TypeScript 项目
 COPY . .
