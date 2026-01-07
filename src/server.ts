@@ -1,39 +1,10 @@
 import express, { Request, Response } from 'express';
 import multer, { FileFilterCallback } from 'multer';
-import cloud from 'wx-server-sdk';
 import { ResumeGenerator } from './resumeGenerator';
-import { ResumeData, JobData, UserResumeProfile } from './types';
+import { ResumeData } from './types';
 
 const app = express();
 const generator = new ResumeGenerator();
-
-// 1. 确定最终要连接的环境 ID
-const FINAL_ENV_ID = process.env.CLOUD_ENV || 'cloud1-REMOVED';
-
-// 2. 暴力初始化：直接把数据库 ID 喂给全局初始化
-console.log('🚀 [关键步骤] 尝试直接连接数据库环境:', FINAL_ENV_ID);
-
-cloud.init({
-  env: FINAL_ENV_ID,
-});
-
-const db = cloud.database();
-
-// 3. 核心调试：启动时立即进行数据库“握手”测试
-(async () => {
-  console.log('🔍 [正在自检] 正在尝试读取 remote_jobs 集合的一条数据...');
-  try {
-    const testRes = await db.collection('remote_jobs').limit(1).get();
-    console.log('✅ [自检成功] 数据库连接已打通！可以正常读取数据。');
-  } catch (err: any) {
-    console.error('❌ [自检失败] 无法连接到数据库。');
-    console.error('   错误代码:', err.errCode);
-    console.error('   详细信息:', err.errMsg);
-    if (err.message && err.message.includes('ETIMEDOUT')) {
-      console.log('   👉 提示：连接超时。这通常意味着【环境共享】未开启，或者两个环境不属于同一个 AppID。');
-    }
-  }
-})();
 
 // 配置 multer 用于文件上传
 const upload = multer({
@@ -132,80 +103,6 @@ app.post('/api/generate', upload.single('avatar'), async (req: MulterRequest, re
     console.error('生成 PDF 时出错:', error);
     res.status(500).json({
       error: '生成 PDF 失败',
-      message: error.message,
-    });
-  }
-});
-
-/**
- * 从云数据库获取数据并生成简历
- * POST /api/generate-from-db
- * 
- * 参数：
- * - jobId: 岗位 ID
- * - userId: 用户 ID
- */
-app.post('/api/generate-from-db', async (req: Request, res: Response) => {
-  const { jobId, userId } = req.body;
-
-  if (!jobId || !userId) {
-    return res.status(400).json({
-      error: '缺少必需参数：jobId 和 userId',
-    });
-  }
-
-  try {
-    // 1. 获取岗位数据
-    console.log(`正在从集合 'remote_jobs' 获取数据, jobId: ${jobId}`);
-    const jobRes = await db.collection('remote_jobs').doc(jobId).get();
-    const jobData = jobRes.data as JobData;
-
-    if (!jobData) {
-      console.error(`未找到 jobId 为 ${jobId} 的岗位`);
-      return res.status(404).json({ error: '找不到对应的岗位数据' });
-    }
-
-    // 2. 获取用户数据
-    console.log(`正在从集合 'users' 获取数据, userId (openid): ${userId}`);
-    const userRes = await db.collection('users').where({
-      _openid: userId
-    }).get();
-    
-    if (!userRes.data || userRes.data.length === 0) {
-      console.error(`未找到 _openid 为 ${userId} 的用户`);
-      return res.status(404).json({ error: '找不到对应的用户记录' });
-    }
-    
-    // 从 users 集合的文档中提取 resume_profile 字段
-    const userDoc = userRes.data[0];
-    const userData = userDoc.resume_profile as UserResumeProfile;
-
-    if (!userData) {
-      console.error(`用户记录中缺少 resume_profile 字段`);
-      return res.status(404).json({ error: '用户未填写简历资料' });
-    }
-
-    // 成功获取数据后，返回部分关键信息给前端验证
-    res.json({
-      status: 'success',
-      message: '数据库查询成功',
-      data: {
-        job: {
-          title: jobData.title_chinese || jobData.title,
-          company: jobData.team,
-          salary: jobData.salary
-        },
-        user: {
-          name: userData.name,
-          identity: userData.identity,
-          phone: userData.phone
-        }
-      }
-    });
-  } catch (error: any) {
-    console.error('查询数据库时出错:', error);
-    res.status(500).json({
-      error: '查询数据库失败',
       message: error.message,
     });
   }
