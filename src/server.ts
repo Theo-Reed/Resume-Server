@@ -7,33 +7,33 @@ import { ResumeData, JobData, UserResumeProfile } from './types';
 const app = express();
 const generator = new ResumeGenerator();
 
-// 加载环境配置
-let envConfig = {
-  cloudEnv: process.env.CLOUD_ENV || cloud.DYNAMIC_TYPE_ANY,
-};
+// 1. 确定最终要连接的环境 ID
+const FINAL_ENV_ID = process.env.CLOUD_ENV || 'cloud1-REMOVED';
 
-try {
-  // 尝试加载本地 env.js (开发环境使用)
-  const localEnv = require('../env');
-  if (localEnv.cloudEnv) {
-    envConfig.cloudEnv = localEnv.cloudEnv;
-  }
-} catch (e) {
-  // 生产环境通常通过云托管环境变量配置，或者直接使用 DYNAMIC_TYPE_ANY
-  console.log('未检测到本地 env.js，将使用环境变量或默认配置');
-}
+// 2. 暴力初始化：直接把数据库 ID 喂给全局初始化
+console.log('🚀 [关键步骤] 尝试直接连接数据库环境:', FINAL_ENV_ID);
 
-// 初始化微信云开发
-console.log('🚀 初始化云环境 (上下文): DYNAMIC_TYPE_ANY');
 cloud.init({
-  env: cloud.DYNAMIC_TYPE_ANY,
+  env: FINAL_ENV_ID,
 });
 
-// 在获取数据库实例时，明确指向你的数据库环境
-console.log('🚀 数据库指向环境:', envConfig.cloudEnv);
-const db = cloud.database({
-  env: envConfig.cloudEnv,
-});
+const db = cloud.database();
+
+// 3. 核心调试：启动时立即进行数据库“握手”测试
+(async () => {
+  console.log('🔍 [正在自检] 正在尝试读取 remote_jobs 集合的一条数据...');
+  try {
+    const testRes = await db.collection('remote_jobs').limit(1).get();
+    console.log('✅ [自检成功] 数据库连接已打通！可以正常读取数据。');
+  } catch (err: any) {
+    console.error('❌ [自检失败] 无法连接到数据库。');
+    console.error('   错误代码:', err.errCode);
+    console.error('   详细信息:', err.errMsg);
+    if (err.message && err.message.includes('ETIMEDOUT')) {
+      console.log('   👉 提示：连接超时。这通常意味着【环境共享】未开启，或者两个环境不属于同一个 AppID。');
+    }
+  }
+})();
 
 // 配置 multer 用于文件上传
 const upload = multer({
