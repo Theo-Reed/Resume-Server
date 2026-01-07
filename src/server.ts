@@ -7,9 +7,25 @@ import { ResumeData, JobData, UserResumeProfile } from './types';
 const app = express();
 const generator = new ResumeGenerator();
 
+// 加载环境配置
+let envConfig = {
+  cloudEnv: process.env.CLOUD_ENV || cloud.DYNAMIC_TYPE_ANY,
+};
+
+try {
+  // 尝试加载本地 env.js (开发环境使用)
+  const localEnv = require('../env');
+  if (localEnv.cloudEnv) {
+    envConfig.cloudEnv = localEnv.cloudEnv;
+  }
+} catch (e) {
+  // 生产环境通常通过云托管环境变量配置，或者直接使用 DYNAMIC_TYPE_ANY
+  console.log('未检测到本地 env.js，将使用环境变量或默认配置');
+}
+
 // 初始化微信云开发
 cloud.init({
-  env: cloud.DYNAMIC_TYPE_ANY,
+  env: envConfig.cloudEnv,
 });
 
 const db = cloud.database();
@@ -135,25 +151,56 @@ app.post('/api/generate-from-db', async (req: Request, res: Response) => {
 
   try {
     // 1. 获取岗位数据
-    // const jobRes = await db.collection('jobs').doc(jobId).get();
-    // const jobData = jobRes.data as JobData;
+    console.log(`正在从集合 'remote_jobs' 获取数据, jobId: ${jobId}`);
+    const jobRes = await db.collection('remote_jobs').doc(jobId).get();
+    const jobData = jobRes.data as JobData;
 
-    // 2. 获取用户简历资料
-    // const userRes = await db.collection('resume_profiles').where({ _openid: userId }).get();
-    // const userData = userRes.data[0] as UserResumeProfile;
+    if (!jobData) {
+      console.error(`未找到 jobId 为 ${jobId} 的岗位`);
+      return res.status(404).json({ error: '找不到对应的岗位数据' });
+    }
 
-    // 目前仅返回 success，后续完善逻辑
-    console.log(`收到生成请求: jobId=${jobId}, userId=${userId}`);
+    // 2. 获取用户数据
+    console.log(`正在从集合 'users' 获取数据, userId (openid): ${userId}`);
+    const userRes = await db.collection('users').where({
+      _openid: userId
+    }).get();
     
+    if (!userRes.data || userRes.data.length === 0) {
+      console.error(`未找到 _openid 为 ${userId} 的用户`);
+      return res.status(404).json({ error: '找不到对应的用户记录' });
+    }
+    
+    // 从 users 集合的文档中提取 resume_profile 字段
+    const userDoc = userRes.data[0];
+    const userData = userDoc.resume_profile as UserResumeProfile;
+
+    if (!userData) {
+      console.error(`用户记录中缺少 resume_profile 字段`);
+      return res.status(404).json({ error: '用户未填写简历资料' });
+    }
+
+    // 成功获取数据后，返回部分关键信息给前端验证
     res.json({
       status: 'success',
-      message: '已收到请求',
-      data: { jobId, userId }
+      message: '数据库查询成功',
+      data: {
+        job: {
+          title: jobData.title_chinese || jobData.title,
+          company: jobData.team,
+          salary: jobData.salary
+        },
+        user: {
+          name: userData.name,
+          identity: userData.identity,
+          phone: userData.phone
+        }
+      }
     });
   } catch (error: any) {
-    console.error('获取数据库数据时出错:', error);
+    console.error('查询数据库时出错:', error);
     res.status(500).json({
-      error: '数据库查询失败',
+      error: '查询数据库失败',
       message: error.message,
     });
   }
