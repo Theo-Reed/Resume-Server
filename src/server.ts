@@ -24,12 +24,16 @@ try {
 }
 
 // 初始化微信云开发
-console.log('🚀 初始化云环境 ID:', envConfig.cloudEnv);
+console.log('🚀 初始化云环境 (上下文): DYNAMIC_TYPE_ANY');
 cloud.init({
-  env: envConfig.cloudEnv,
+  env: cloud.DYNAMIC_TYPE_ANY,
 });
 
-const db = cloud.database();
+// 在获取数据库实例时，明确指向你的数据库环境
+console.log('🚀 数据库指向环境:', envConfig.cloudEnv);
+const db = cloud.database({
+  env: envConfig.cloudEnv,
+});
 
 // 配置 multer 用于文件上传
 const upload = multer({
