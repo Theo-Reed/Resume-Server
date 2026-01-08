@@ -1,10 +1,12 @@
 import express, { Request, Response } from 'express';
 import multer, { FileFilterCallback } from 'multer';
 import { ResumeGenerator } from './resumeGenerator';
+import { GeminiService } from './geminiService';
 import { ResumeData, GenerateFromFrontendRequest } from './types';
 
 const app = express();
 const generator = new ResumeGenerator();
+const gemini = new GeminiService();
 
 // 配置 multer 用于文件上传
 const upload = multer({
@@ -138,11 +140,26 @@ app.get('/health', (req: Request, res: Response) => {
 // ⚠️ 微信云托管强制要求监听 80 端口
 const PORT = process.env.PORT || 80;
 
-app.listen(PORT, () => {
-  console.log(`简历生成服务已启动，端口: ${PORT}`);
-  console.log(`API 端点: http://localhost:${PORT}/api/generate`);
-  console.log(`健康检查: http://localhost:${PORT}/health`);
-});
+async function startServer() {
+  // 🚀 部署自检：测试 Gemini 连通性
+  console.log('🔍 正在执行部署自检: Gemini 连通性...');
+  const check = await gemini.checkConnectivity();
+  
+  if (check.success) {
+    console.log(`✅ ${check.message}`);
+  } else {
+    console.error(`❌ ${check.message}`);
+    console.error('📋 排查信息:', JSON.stringify(check.details, null, 2));
+  }
+
+  app.listen(PORT, () => {
+    console.log(`简历生成服务已启动，端口: ${PORT}`);
+    console.log(`API 端点: http://localhost:${PORT}/api/generate`);
+    console.log(`健康检查: http://localhost:${PORT}/health`);
+  });
+}
+
+startServer();
 
 // 优雅关闭
 process.on('SIGTERM', async () => {
