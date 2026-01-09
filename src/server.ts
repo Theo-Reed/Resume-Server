@@ -215,11 +215,11 @@ async function startServer() {
     console.log('ℹ️ 未检测到 CLOUD_ENV 或 TCB 配置，跳过数据库连通性自检');
   }
 
-  app.listen(PORT, () => {
-    console.log(`简历生成服务已启动，端口: ${PORT}`);
-    console.log(`API 端点: http://localhost:${PORT}/api/generate`);
-    console.log(`健康检查: http://localhost:${PORT}/health`);
-  });
+app.listen(PORT, () => {
+  console.log(`简历生成服务已启动，端口: ${PORT}`);
+  console.log(`API 端点: http://localhost:${PORT}/api/generate`);
+  console.log(`健康检查: http://localhost:${PORT}/health`);
+});
 }
 
 startServer();
