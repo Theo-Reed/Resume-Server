@@ -1,0 +1,53 @@
+{
+  "name": "于海涛",
+  "photo": "https://picx.zhimg.com/v2-a4e62da535956c002e84d21caae1cb6e_xl.jpg?source=32738c0c&needBackground=1",
+  "gender": "男",
+  "birthday": "1998-12",
+  "identity": "职场人",
+  "wechat": "xxxxxx",
+  "email": "xxxx@gmail.com",
+  "phone": "19877772222",
+  "educations": [
+    {
+      "school": "大连理工大学",
+      "degree": "本科 (全日制)",
+      "major": "软件工程",
+      "startDate": "2016-06",
+      "endDate": "2020-09",
+      "description": "喜欢摸摸鱼，打打游戏"
+    },
+    {
+      "school": "中国农业大学",
+      "degree": "硕士 (全日制)",
+      "major": "软件工程",
+      "startDate": "2020-09",
+      "endDate": "2022-06",
+      "description": "喜欢打打游戏，摸摸鱼"
+    }
+  ],
+  "workExperiences": [
+    {
+      "company": "虎牙",
+      "jobTitle": "程序员",
+      "businessDirection": "直播公司，也有子团队在做东南亚电商项目，目前商业化做的不好，努力在游戏上找变现方式。",
+      "startDate": "2024-01",
+      "endDate": "至今"
+    },
+    {
+      "company": "小米",
+      "jobTitle": "程序员",
+      "businessDirection": "",
+      "startDate": "2023-03",
+      "endDate": "2024-05"
+    }
+  ],
+  "certificates": [
+    "cet-6",
+    "日语N2"
+  ],
+  "skills": [
+    "Python",
+    "很会写ppt"
+  ],
+  "aiMessage": "一定要在个人简介体现我会中英双语，英语听和写比较好。"
+}

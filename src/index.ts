@@ -1,14 +1,14 @@
 import { ResumeGenerator } from './resumeGenerator';
 import { ResumeAIService } from './resumeAIService';
-import { ResumeData, GenerateFromFrontendRequest, mapFrontendRequestToResumeData } from './types';
+import { ResumeData, GenerateFromFrontendRequest, mapFrontendRequestToResumeData, UserResumeProfile } from './types';
 import { writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 /**
- * 从 test_data.json 加载并转换数据
+ * 从 test_profile.json 加载并转换数据
  */
 function getTestData(): ResumeData {
-  const rawData = readFileSync(join(process.cwd(), 'test_data.json'), 'utf-8');
+  const rawData = readFileSync(join(process.cwd(), 'test_profile.json'), 'utf-8');
   const payload = JSON.parse(rawData) as GenerateFromFrontendRequest;
   
   // 统一调用映射方法
@@ -212,20 +212,44 @@ async function main() {
  * 使用测试数据生成简历
  */
 async function generateWithTestData() {
+  const args = process.argv.slice(3); // 获取 test-data 之后的参数
+  const index = args[0] ? parseInt(args[0]) : -1;
+
   const generator = new ResumeGenerator();
   const aiService = new ResumeAIService();
   
-  const rawData = readFileSync(join(process.cwd(), 'test_data.json'), 'utf-8');
-  const payload = JSON.parse(rawData) as GenerateFromFrontendRequest;
+  // 1. 加载用户 profile (仅包含 UserResumeProfile)
+  const profileRaw = readFileSync(join(process.cwd(), 'test_profile.json'), 'utf-8');
+  const resume_profile = JSON.parse(profileRaw) as UserResumeProfile;
+  
+  // 2. 加载岗位数据 (从 diverse_test_jobs.json 获取)
+  const diverseJobsRaw = readFileSync(join(process.cwd(), 'diverse_test_jobs.json'), 'utf-8');
+  const diverseJobs = JSON.parse(diverseJobsRaw);
+  
+  // 如果没传索引，默认使用第一个岗位 (0)
+  const jobIndex = index >= 0 ? index : 0;
+  const job_data = diverseJobs[jobIndex];
+
+  console.log(`📌 使用岗位 [${jobIndex}]: ${job_data.title_chinese}`);
+
+  const finalPayload: GenerateFromFrontendRequest = {
+    jobId: job_data._id,
+    userId: "test-user-openid",
+    language: "chinese", // 默认中文
+    resume_profile,
+    job_data
+  };
 
   try {
     console.log('正在调用 Gemini AI 增强简历内容...');
-    const resumeData = await aiService.enhance(payload);
+    const resumeData = await aiService.enhance(finalPayload);
     
-    console.log('开始使用增强后的数据生成 PDF...');
-    const outputPath = join(process.cwd(), 'resume-from-test-data.pdf');
+    const outputName = `resume-test-job-${jobIndex}.pdf`;
+    console.log(`开始生成 PDF: ${outputName}...`);
+    
+    const outputPath = join(process.cwd(), outputName);
     await generator.generatePDFToFile(resumeData, outputPath);
-    console.log(`简历 PDF 已成功生成: ${outputPath}`);
+    console.log(`✅ 简历 PDF 已成功生成: ${outputPath}`);
   } catch (error) {
     console.error('流程中出错:', error);
     process.exit(1);
@@ -247,7 +271,7 @@ async function mainWithUpdate() {
     await generateResumeWithoutAvatar();
   } else {
     console.log('使用方法:');
-    console.log('  npm run dev:test-data               # 使用 test_data.json 生成简历');
+    console.log('  npm run dev:test-data               # 使用 test_profile.json 生成简历');
     console.log('  npm run dev:example with-avatar      # 生成内置示例简历');
     console.log('');
     await generateResumeWithAvatar();

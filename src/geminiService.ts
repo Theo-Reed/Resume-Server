@@ -63,7 +63,12 @@ export class GeminiService {
    * 优先调用 gemini-2.0-flash，失败后调用 gemini-2.5-pro
    */
   async generateContent(prompt: string): Promise<string> {
-    const models = ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"];
+    const models = [
+      "gemini-3-flash-preview", 
+      "gemini-2.5-pro", 
+      "gemini-2.5-flash", 
+      "gemini-2.0-flash"
+    ];
     
     for (const modelName of models) {
       try {
