@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import multer, { FileFilterCallback } from 'multer';
+import { v4 as uuidv4 } from 'uuid';
 const tcb = require("@cloudbase/node-sdk");
 import { ResumeGenerator } from './resumeGenerator';
 import { GeminiService } from './geminiService';
@@ -11,6 +12,8 @@ const generator = new ResumeGenerator();
 const gemini = new GeminiService();
 const aiService = new ResumeAIService();
 
+const COLLECTION_RESUMES = 'generated_resumes';
+
 // 1. 确定最终要连接的环境 ID (用于部署自检)
 const FINAL_ENV_ID = process.env.CLOUD_ENV;
 let tcbApp: any;
@@ -21,6 +24,60 @@ if (FINAL_ENV_ID) {
     secretId: process.env.SecretId,
     secretKey: process.env.SecretKey,
   });
+}
+
+const db = tcbApp ? tcbApp.database() : null;
+const storage = tcbApp ? tcbApp.storage() : null;
+
+/**
+ * 异步后台任务：负责 AI 增强、PDF 生成和上传云存储
+ */
+async function runBackgroundTask(taskId: string, payload: GenerateFromFrontendRequest) {
+  if (!db || !storage) {
+    console.error(`[Task ${taskId}] ❌ 无法启动后台任务：数据库或存储未初始化`);
+    return;
+  }
+
+  try {
+    console.log(`[Task ${taskId}] 🤖 开始 AI 增强内容...`);
+    // 1. 调用 AI 增强服务
+    const resumeData = await aiService.enhance(payload);
+
+    console.log(`[Task ${taskId}] 📄 开始生成 PDF...`);
+    // 2. 生成 PDF Buffer
+    const pdfBuffer = await generator.generatePDFToBuffer(resumeData);
+
+    console.log(`[Task ${taskId}] ☁️ 开始上传到云存储...`);
+    // 3. 上传到云存储
+    // 路径规则：resumes/用户OpenID/时间戳_taskId.pdf
+    const timestamp = Date.now();
+    const cloudPath = `resumes/${payload.userId}/${timestamp}_${taskId}.pdf`;
+    const uploadRes = await storage.uploadFile({
+      cloudPath: cloudPath,
+      fileContent: pdfBuffer
+    });
+
+    // 4. 更新数据库状态为成功
+    await db.collection(COLLECTION_RESUMES).where({ task_id: taskId }).update({
+      status: 'completed',
+      fileId: uploadRes.fileID,
+      completeTime: db.serverDate() // 补充完成时间
+    });
+
+    console.log(`[Task ${taskId}] ✅ 任务完成并已上传: ${uploadRes.fileID}`);
+  } catch (error: any) {
+    console.error(`[Task ${taskId}] ❌ 任务处理失败:`, error);
+    // 更新数据库状态为失败
+    try {
+      await db.collection(COLLECTION_RESUMES).where({ task_id: taskId }).update({
+        status: 'failed',
+        errorMessage: error.message || '内部处理超时或生成失败',
+        completeTime: db.serverDate()
+      });
+    } catch (dbError) {
+      console.error(`[Task ${taskId}] ❌ 无法更新失败状态到数据库:`, dbError);
+    }
+  }
 }
 
 // 配置 multer 用于文件上传
@@ -72,75 +129,56 @@ interface MulterRequest extends Request {
 
 app.post('/api/generate', upload.single('avatar'), async (req: MulterRequest, res: Response) => {
   try {
-    // [测试用] 打印接收到的数据，方便调试
+    // [测试用] 打印接收到的数据
     console.log('🚀 收到生成请求');
     
-    // 如果是这种新结构，打印更详细的信息
-    if (req.body.resume_profile && req.body.job_data) {
-      const payload = req.body as GenerateFromFrontendRequest;
-      console.log('👤 用户姓名:', payload.resume_profile.name);
-      console.log('💼 岗位名称:', payload.job_data.title_chinese || payload.job_data.title);
-      console.log('🤖 AI 指令:', payload.resume_profile.aiMessage);
-    } else {
-      console.log('📦 Body 内容 (常规结构):', JSON.stringify(req.body, null, 2));
+    if (!req.body.resume_profile || !req.body.job_data) {
+      return res.status(400).json({ error: '缺少必需的 resume_profile 或 job_data' });
     }
 
-    if (req.file) {
-      console.log('📷 收到上传文件:', req.file.originalname, '大小:', req.file.size);
+    const payload = req.body as GenerateFromFrontendRequest;
+    console.log('👤 用户姓名:', payload.resume_profile.name);
+    console.log('💼 岗位名称:', payload.job_data.title_chinese || payload.job_data.title);
+
+    if (!db) {
+      return res.status(500).json({ error: '数据库服务未就绪，请检查 CLOUD_ENV 配置' });
     }
 
-    let resumeData: ResumeData;
-    let avatar: string | undefined;
+    // 1. 生成唯一 Task ID
+    // 格式: RESUME_年月日时分秒_UUID前8位
+    const now = new Date();
+    const dateStr = now.toISOString().replace(/[-:T]/g, '').slice(0, 14);
+    const taskId = `RESUME_${dateStr}_${uuidv4().slice(0, 8)}`;
 
-    // 检查是否有文件上传 (Multer)
-    if (req.file) {
-      avatar = bufferToDataURL(req.file.buffer, req.file.mimetype);
-    }
+    // 2. 预先入库（立即执行）
+    console.log(`📡 正在创建任务: ${taskId}`);
+    await db.collection(COLLECTION_RESUMES).add({
+      _openid: payload.userId,
+      task_id: taskId,
+      status: 'processing',
+      jobTitle: payload.job_data.title_chinese || payload.job_data.title,
+      company: payload.job_data.team,
+      jobId: payload.jobId,
+      createTime: db.serverDate(),
+      resumeInfo: payload.resume_profile // 保存快照
+    });
 
-    // 1. 处理新的请求结构 (resume_profile + job_data)
-    if (req.body.resume_profile && req.body.job_data) {
-      const payload = req.body as GenerateFromFrontendRequest;
-      // 调用 AI 增强服务
-      resumeData = await aiService.enhance(payload);
-    } else if (req.body.resumeData) {
-      // 2. 处理原有的 JSON 结构
-      if (typeof req.body.resumeData === 'string') {
-        resumeData = JSON.parse(req.body.resumeData);
-      } else {
-        resumeData = req.body.resumeData;
-      }
-    } else {
-      // 3. 处理直接的请求体
-      resumeData = req.body;
-    }
+    // 3. 开启异步后台任务
+    // 不 await，直接让其在后台运行
+    runBackgroundTask(taskId, payload);
 
-    // 优先使用文件上传的头像，其次是请求体中的头像，最后是 profile 里的 photo
-    if (avatar) {
-      resumeData.avatar = avatar;
-    } else if (req.body.avatar) {
-      resumeData.avatar = req.body.avatar;
-    }
+    // 4. 立即返回 TaskID 给前端
+    res.json({
+      success: true,
+      task_id: taskId,
+      status: 'processing',
+      message: '简历生成任务已启动，正在后台处理中'
+    });
 
-    // 验证必需字段
-    if (!resumeData.name || !resumeData.position) {
-      return res.status(400).json({
-        error: '缺少必需字段：name 和 position',
-      });
-    }
-
-    // 生成 PDF
-    const pdfBuffer = await generator.generatePDFToBuffer(resumeData);
-
-    // 返回 PDF
-    const safeName = encodeURIComponent(resumeData.name);
-    res.setHeader('Content-Type', 'application/pdf');
-    // 使用 RFC 5987 标准编码文件名，解决中文乱码及非法字符问题
-    res.setHeader('Content-Disposition', `attachment; filename="${safeName}.pdf"; filename*=UTF-8''${safeName}.pdf`);
-    res.send(pdfBuffer);
   } catch (error: any) {
-    console.error('生成 PDF 时出错:', error);
+    console.error('提交任务失败:', error);
     res.status(500).json({
-      error: '生成 PDF 失败',
+      error: '任务提交失败',
       message: error.message,
     });
   }
