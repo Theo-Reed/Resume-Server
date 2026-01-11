@@ -9,7 +9,7 @@ export class GeminiService {
 
   constructor() {
     this.apiKey = process.env.GEMINI_API || "";
-    
+
     // 优先尝试加载本地 env.js 配置
     try {
       // @ts-ignore
@@ -45,22 +45,22 @@ export class GeminiService {
       // 使用极简请求，几乎不消耗 token
       const result = await model.generateContent({
         contents: [{ role: "user", parts: [{ text: "p" }] }],
-        generationConfig: { maxOutputTokens: 1 } 
+        generationConfig: { maxOutputTokens: 1 }
       });
-      
+
       await result.response;
       return { success: true, message: "Gemini 连通性测试通过" };
     } catch (error: any) {
       let errorMsg = error.message || "未知错误";
-      
+
       // 常见错误排查指南
       if (errorMsg.includes("403")) errorMsg += " (可能是 API Key 无效或未启用 Gemini API)";
       if (errorMsg.includes("404")) errorMsg += " (可能是域名/模型路径错误)";
       if (errorMsg.includes("fetch failed")) errorMsg += " (网络不可达，请检查域名解析或代理设置)";
-      
-      return { 
-        success: false, 
-        message: "Gemini 连通性测试失败", 
+
+      return {
+        success: false,
+        message: "Gemini 连通性测试失败",
         details: {
           error: errorMsg,
           baseUrl: this.baseUrl,
@@ -78,16 +78,16 @@ export class GeminiService {
    */
   async generateContent(prompt: string, validator?: (text: string) => boolean | Promise<boolean>): Promise<string> {
     const models = [
-      "gemini-3-flash-preview", 
-      "gemini-2.5-pro", 
-      "gemini-2.5-flash", 
+      "gemini-3-flash-preview",
+      "gemini-3-pro-preview",
+      "gemini-2.5-pro",
     ];
-    
+
     for (const modelName of models) {
       try {
         console.log(`🤖 尝试使用模型: ${modelName}`);
         const genAI = new GoogleGenerativeAI(this.apiKey);
-        
+
         const model = genAI.getGenerativeModel(
           { model: modelName },
           { baseUrl: this.baseUrl }
@@ -96,7 +96,7 @@ export class GeminiService {
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
-        
+
         // 执行逻辑校验
         if (validator) {
           try {
@@ -115,7 +115,7 @@ export class GeminiService {
         return text;
       } catch (error: any) {
         console.error(`❌ ${modelName} 处理失败:`, error.message);
-        
+
         // 如果是最后一个模型也失败了，则抛出最终错误
         if (modelName === models[models.length - 1]) {
           throw new Error(`所有 Gemini 模型均无法生成合法内容: ${error.message}`);
@@ -123,7 +123,7 @@ export class GeminiService {
         console.log("🔄 正在尝试切换到下一个模型...");
       }
     }
-    
+
     return "";
   }
 }
@@ -134,7 +134,7 @@ export class GeminiService {
 async function testGemini() {
   const service = new GeminiService();
   const testPrompt = "你好，请简单介绍一下你自己。";
-  
+
   try {
     console.log("🚀 开始测试 Gemini 调用...");
     const response = await service.generateContent(testPrompt);
