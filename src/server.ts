@@ -49,6 +49,12 @@ async function runBackgroundTask(taskId: string, payload: GenerateFromFrontendRe
   }
 
   try {
+    // 在生成之前检查连通性，避免浪费计算资源
+    const check = await gemini.checkConnectivity();
+    if (!check.success) {
+      throw new Error(`Gemini 服务不可用: ${check.message}`);
+    }
+
     console.log(`[Task ${taskId}] 🤖 开始 AI 增强内容...`);
     // 1. 调用 AI 增强服务
     const resumeData = await aiService.enhance(payload);
@@ -250,19 +256,6 @@ async function startServer() {
   // 🚀 启动服务器监听
   app.listen(PORT, () => {
     console.log(`简历生成服务已启动，端口: ${PORT}`);
-
-    // 🚀 异步执行部署自检，不阻塞服务启动
-    (async () => {
-      console.log('🔍 正在异步执行自检: Gemini 连通性...');
-      const geminiCheck = await gemini.checkConnectivity();
-      
-      if (geminiCheck.success) {
-        console.log(`✅ ${geminiCheck.message}`);
-      } else {
-        console.error(`❌ ${geminiCheck.message}`);
-        console.error('📋 排查信息:', JSON.stringify(geminiCheck.details, null, 2));
-      }
-    })();
   });
 }
 

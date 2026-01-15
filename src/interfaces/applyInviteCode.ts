@@ -51,13 +51,17 @@ router.post('/applyInviteCode', async (req: Request, res: Response) => {
     }
     const inviteeNewExpireAt = new Date(inviteeBaseDate.getTime() + rewardDays * 24 * 60 * 60 * 1000);
 
+    // 智能判断受邀者等级：如果不低于1级则保持原样，否则升级为1级
+    const currentInviteeLevel = (invitee as any).membership?.level || 0;
+    const newInviteeLevel = Math.max(currentInviteeLevel, 1);
+
     await usersCol.updateOne(
       { openid: invitee.openid },
       { 
         $set: { 
           hasUsedInviteCode: true,
           'membership.expire_at': inviteeNewExpireAt,
-          'membership.level': 1 // 体验会员
+          'membership.level': newInviteeLevel
         },
         $inc: { 
           'membership.pts_quota.limit': rewardPoints
@@ -72,12 +76,16 @@ router.post('/applyInviteCode', async (req: Request, res: Response) => {
     }
     const inviterNewExpireAt = new Date(inviterBaseDate.getTime() + rewardDays * 24 * 60 * 60 * 1000);
 
+    // 智能判断邀请者等级：如果不低于1级则保持原样，否则升级为1级
+    const currentInviterLevel = inviter.membership?.level || 0;
+    const newInviterLevel = Math.max(currentInviterLevel, 1);
+
     await usersCol.updateOne(
       { openid: inviter.openid },
       { 
         $set: { 
           'membership.expire_at': inviterNewExpireAt,
-          'membership.level': 1 // 确保至少是体验会员
+          'membership.level': newInviterLevel
         },
         $inc: { 
           'membership.pts_quota.limit': rewardPoints
@@ -87,7 +95,7 @@ router.post('/applyInviteCode', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      message: `邀请码应用成功，双方各获得 ${rewardDays} 天会员及 ${rewardPoints} 点算力额度`,
+      message: `邀请码应用成功，双方各获得当前会员时长增加 ${rewardDays} 天及 ${rewardPoints} 点算力额度`,
       result: { success: true }
     });
 
