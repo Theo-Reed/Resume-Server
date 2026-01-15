@@ -121,10 +121,9 @@ export interface JobData {
  */
 export interface UserResumeProfile {
   name: string;
-  photo: string; // Cloud ID or HTTPS URL
+  photo: string; // HTTPS URL or Base64 DataURL
   gender: string;
   birthday: string; // YYYY-MM
-  identity: string; // '在校生', '职场人'
   wechat: string;
   email: string;
   phone: string;
@@ -167,8 +166,17 @@ export function mapFrontendRequestToResumeData(payload: GenerateFromFrontendRequ
   const job = payload.job_data;
   const isEnglish = payload.language === 'english';
 
+  // 处理姓名映射 (中文环境包含性别逻辑)
+  let displayName = profile.name;
+  if (!isEnglish) {
+     // 如果没有照片，在名字后面拼上性别
+     if (!profile.photo || profile.photo.trim() === '') {
+        displayName = `${displayName} (${profile.gender})`;
+     }
+  }
+
   return {
-    name: profile.name,
+    name: displayName,
     position: isEnglish ? (job.title_english || job.title) : (job.title_chinese || job.title),
     contact: {
       email: profile.email,
@@ -177,28 +185,28 @@ export function mapFrontendRequestToResumeData(payload: GenerateFromFrontendRequ
     },
     avatar: profile.photo,
     languages: isEnglish ? 'english' : 'chinese',
-    yearsOfExperience: 0, // 默认 0，后续可根据工作经历计算
+    yearsOfExperience: 0, 
     education: profile.educations.map(edu => {
-      // 处理学历显示逻辑：全日制只显示学位，非全日制额外标注
-      let degreeDisplay = edu.degree;
-      if (edu.degree.includes('全日制')) {
-        degreeDisplay = edu.degree.replace(/\s*\(全日制\)\s*/g, '').replace(/全日制/g, '').trim();
+      let degree = edu.degree;
+
+      if (!isEnglish && degree.includes('全日制')) {
+        degree = degree.replace(/\s*\(全日制\)\s*/g, '').replace(/全日制/g, '').trim();
       }
       
       return {
         school: edu.school,
-        degree: `${edu.major} ${degreeDisplay}`,
+        degree: isEnglish ? `${edu.major}, ${degree}` : `${edu.major} ${degree}`,
         graduationDate: `${edu.startDate} - ${edu.endDate}`,
         description: edu.description
       };
     }),
-    personalIntroduction: "", // 后续由 AI 生成
+    personalIntroduction: "", 
     workExperience: profile.workExperiences.map(exp => ({
       company: exp.company,
       position: exp.jobTitle,
       startDate: exp.startDate,
       endDate: exp.endDate,
-      responsibilities: [] // 后续由 AI 生成
+      responsibilities: [] 
     })),
     certificates: (profile.certificates || []).map(cert => ({
       name: cert

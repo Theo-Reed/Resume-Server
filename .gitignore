@@ -25,5 +25,11 @@ npm-debug.log*
 # Environment variables
 .env
 .env.local
-env.js
 
+# Certificates
+*.pem
+
+.env
+*.pem
+*.log
+public/uploads/

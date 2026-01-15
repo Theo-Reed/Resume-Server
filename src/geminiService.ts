@@ -10,20 +10,8 @@ export class GeminiService {
   constructor() {
     this.apiKey = process.env.GEMINI_API || "";
 
-    // 优先尝试加载本地 env.js 配置
-    try {
-      // @ts-ignore
-      const localEnv = require('../env');
-      if (localEnv.GEMINI_API) {
-        this.apiKey = localEnv.GEMINI_API;
-        console.log("✅ 已从本地 env.js 加载 GEMINI_API");
-      }
-    } catch (e) {
-      // 生产环境或找不到文件时忽略
-    }
-
     if (!this.apiKey) {
-      console.warn("⚠️ 未检测到 GEMINI_API 环境变量");
+      console.warn("⚠️ 未检测到 GEMINI_API 环境变量，通过 .env 文件或系统变量进行配置");
     }
   }
 

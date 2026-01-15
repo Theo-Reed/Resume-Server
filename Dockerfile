@@ -70,13 +70,11 @@ RUN npm run build
 RUN npm prune --production
 
 # 9. 暴露端口
-# ⚠️ 微信云托管强制要求监听 80 端口
-EXPOSE 80
+EXPOSE 3000
 
 # 10. 设置环境变量
 ENV NODE_ENV=production
-# ⚠️ 微信云托管强制要求监听 80 端口
-ENV PORT=80
+ENV PORT=3000
 
 # 11. 启动命令（使用编译后的 server.js）
 CMD ["node", "dist/server.js"]

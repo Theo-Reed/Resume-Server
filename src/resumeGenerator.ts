@@ -46,7 +46,6 @@ export class ResumeGenerator {
    * 支持格式：
    * - data:image/...;base64,... (Base64)
    * - http:// 或 https:// (HTTP URL)
-   * - cloud://... (云存储链接，需要转换为实际 URL)
    */
   private formatAvatar(avatar?: string): string {
     if (!avatar || avatar.trim() === '') {
@@ -59,10 +58,6 @@ export class ResumeGenerator {
     if (imageUrl.startsWith('data:')) {
       return `<img src="${imageUrl}" alt="头像" class="avatar" onerror="this.style.display='none';this.parentElement.style.display='none';" />`;
     }
-    
-    // 如果是云存储链接 cloud://，需要转换为实际 URL
-    // 注意：这里假设云存储链接已经可以被浏览器访问，或者需要在前端转换为实际 URL
-    // 如果无法访问，onerror 会隐藏图片
     
     // 转义 URL 并添加错误处理
     return `<img src="${this.escapeHtml(imageUrl)}" alt="头像" class="avatar" onerror="this.style.display='none';this.parentElement.style.display='none';" />`;
