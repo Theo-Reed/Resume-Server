@@ -258,6 +258,74 @@ async function generateWithTestData() {
   }
 }
 
+// 直接渲染测试（跳过 Gemini）
+async function directRenderTest(mode: 'with-avatar' | 'without-avatar') {
+  console.log(`📌 开始直接渲染测试 (模式: ${mode}, 跳过 AI)...`);
+  
+  const generator = new ResumeGenerator();
+  
+  try {
+    // 1. 加载数据
+    const profileRaw = readFileSync(join(process.cwd(), 'tests/test_profile.json'), 'utf-8');
+    const profile = JSON.parse(profileRaw) as UserResumeProfile;
+    
+    // 根据模式处理头像
+    if (mode === 'without-avatar') {
+      profile.photo = '';
+    }
+
+    // 2. 模拟 resume data (因为跳过 AI，手动填充一些假数据以便排版好看)
+    const resumeData: ResumeData = {
+      name: profile.name,
+      position: "测试工程师",
+      yearsOfExperience: 3,
+      languages: 'chinese',
+      avatar: profile.photo,
+      contact: {
+        email: profile.email,
+        phone: profile.phone,
+        wechat: profile.wechat,
+        website: profile.website // 确保包含 website
+      },
+      education: profile.educations.map(edu => ({
+        school: edu.school,
+        degree: `${edu.major} ${edu.degree}`,
+        graduationDate: `${edu.startDate} - ${edu.endDate}`,
+        description: edu.description
+      })),
+      personalIntroduction: "这里是直接渲染测试生成的个人介绍。本测试旨在验证不经过 AI 处理的情况下，PDF 渲染器能否正确展示个人博客链接等联系信息。\n我的个人网站是：" + (profile.website || "未设置"),
+      professionalSkills: [
+        { title: "测试技能 A", items: ["单元测试", "集成测试", "端到端测试"] },
+        { title: "前端技能", items: ["Vue", "React", "TypeScript"] }
+      ],
+      workExperience: profile.workExperiences.map(exp => ({
+        company: exp.company,
+        position: exp.jobTitle,
+        startDate: exp.startDate,
+        endDate: exp.endDate,
+        responsibilities: [
+          "这是手动填充的测试职责 1",
+          "这是手动填充的测试职责 2",
+          "这是手动填充的测试职责 3"
+        ]
+      })),
+      certificates: (profile.certificates || []).map(cert => ({ name: cert }))
+    };
+
+    const outputName = `direct-render-test-${mode}.pdf`;
+    const outputPath = join(process.cwd(), outputName);
+    
+    console.log(`正在生成 PDF: ${outputName}...`);
+    await generator.generatePDFToFile(resumeData, outputPath);
+    console.log(`✅ 测试 PDF 已生成: ${outputPath}`);
+    
+  } catch (error) {
+    console.error('Test failed:', error);
+  } finally {
+    await generator.close();
+  }
+}
+
 // 修改 main 函数支持 test-data 参数
 async function mainWithUpdate() {
   const args = process.argv.slice(2);
@@ -265,13 +333,17 @@ async function mainWithUpdate() {
 
   if (command === 'test-data') {
     await generateWithTestData();
+  } else if (command === 'direct-render') {
+    const subMode = args[1] === 'without-avatar' ? 'without-avatar' : 'with-avatar';
+    await directRenderTest(subMode);
   } else if (command === 'with-avatar') {
     await generateResumeWithAvatar();
   } else if (command === 'without-avatar') {
     await generateResumeWithoutAvatar();
   } else {
     console.log('使用方法:');
-    console.log('  npm run dev:test-data               # 使用 test_profile.json 生成简历');
+    console.log('  npm run dev:test-data               # 使用 test_profile.json + AI 生成简历');
+    console.log('  ts-node src/index.ts direct-render [with-avatar|without-avatar] # 跳过 AI 直接生成测试 PDF');
     console.log('  npm run dev:example with-avatar      # 生成内置示例简历');
     console.log('');
     await generateResumeWithAvatar();

@@ -97,27 +97,31 @@ export class ResumeGenerator {
     const items: string[] = [];
     
     if (contact.email) {
-      items.push(contact.email);
+      items.push(this.escapeHtml(contact.email));
     }
     if (contact.wechat) {
-      items.push(contact.wechat);
+      items.push(this.escapeHtml(contact.wechat));
     }
     if (contact.phone) {
-      items.push(contact.phone);
+      items.push(this.escapeHtml(contact.phone));
     }
     
     const isEnglish = languages === 'english';
-    const yearSuffix = isEnglish ? (yearsOfExperience === 1 ? 'year exp' : 'years exp') : '年经验';
-    items.push(`${yearsOfExperience}${yearSuffix}`);
+    const totalYears = Math.floor(yearsOfExperience || 0);
+    const yearSuffix = isEnglish ? (totalYears === 1 ? 'year exp' : 'years exp') : '年经验';
+    items.push(this.escapeHtml(`${totalYears}${yearSuffix}`));
 
     if (contact.website) {
-      // 移除协议头
+      // 移除协议头用于显示
       const displayWebsite = contact.website.replace(/^https?:\/\//, '');
-      items.push(`🔗${displayWebsite}`);
+      // 确保链接有协议头
+      const href = contact.website.startsWith('http') ? contact.website : `https://${contact.website}`;
+      // 🔗 符号不进行转义，网址内容进行转义，并使用 <a> 标签包裹
+      items.push(`🔗<a href="${this.escapeHtml(href)}" target="_blank" style="color: inherit; text-decoration: underline; text-underline-offset: 2px;">${this.escapeHtml(displayWebsite)}</a>`);
     }
     
     // 使用 span 包裹每个项目，便于 CSS 控制换行和分隔符
-    return items.map(item => `<span class="contact-item">${this.escapeHtml(item)}</span>`).join('');
+    return items.map(item => `<span class="contact-item">${item}</span>`).join('');
   }
 
   /**

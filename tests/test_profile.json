@@ -1,53 +1,52 @@
 {
   "name": "于海涛",
-  "photo": "https://picx.zhimg.com/v2-a4e62da535956c002e84d21caae1cb6e_xl.jpg?source=32738c0c&needBackground=1",
+  "photo": "/public/uploads/thumb-1768496346665-201831244.webp",
   "gender": "男",
-  "birthday": "1998-12",
+  "birthday": "",
   "identity": "职场人",
-  "wechat": "xxxxxx",
-  "email": "xxxx@gmail.com",
-  "phone": "19877772222",
+  "wechat": "Finn0831",
+  "email": "theoreed19971011@gmail.com",
+  "phone": "18741938886",
+  "website": "github.com/Theo-Reed",
   "educations": [
-    {
-      "school": "大连理工大学",
-      "degree": "本科 (全日制)",
-      "major": "软件工程",
-      "startDate": "2016-06",
-      "endDate": "2020-09",
-      "description": "喜欢摸摸鱼，打打游戏"
-    },
     {
       "school": "中国农业大学",
       "degree": "硕士 (全日制)",
-      "major": "软件工程",
-      "startDate": "2020-09",
+      "major": "农业工程与信息技术",
+      "startDate": "2024-09",
+      "endDate": "2026-06",
+      "description": ""
+    },
+    {
+      "school": "大连外国语大学",
+      "degree": "本科 (全日制)",
+      "major": "网络工程",
+      "startDate": "2018-09",
       "endDate": "2022-06",
-      "description": "喜欢打打游戏，摸摸鱼"
+      "description": ""
     }
   ],
   "workExperiences": [
     {
-      "company": "虎牙",
+      "company": "广州虎牙科技有限公司",
       "jobTitle": "程序员",
-      "businessDirection": "直播公司，也有子团队在做东南亚电商项目，目前商业化做的不好，努力在游戏上找变现方式。",
-      "startDate": "2024-01",
-      "endDate": "至今"
+      "businessDirection": "腾讯公司的全资子公司，主业务为直播，商业化为游戏和广告，也有出海东南亚的业务。",
+      "startDate": "2022-02",
+      "endDate": "2023-12"
     },
     {
-      "company": "小米",
+      "company": "北京小米科技有限公司",
       "jobTitle": "程序员",
-      "businessDirection": "",
-      "startDate": "2023-03",
-      "endDate": "2024-05"
+      "businessDirection": "小米应用商店",
+      "startDate": "2020-06",
+      "endDate": "2021-09"
     }
   ],
   "certificates": [
-    "cet-6",
-    "日语N2"
+    "CET-6"
   ],
   "skills": [
-    "Python",
-    "很会写ppt"
+    "全栈开发"
   ],
-  "aiMessage": "一定要在个人简介体现我会中英双语，英语听和写比较好。"
+  "aiMessage": "个人介绍一定要体现我英文比较好。无论岗位与我的过往的工作经历有没有关联，都不要改变我过往工作职称，并根据我的职称生成工作经历。"
 }

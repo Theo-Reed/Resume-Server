@@ -98,7 +98,7 @@ export class ResumeAIService {
         // 使用 AI 生成的专业职级名称，而不是原始的 Target Title
         // 因为 Target Title 可能包含冗余后缀（如" - 生态系统专家"），而 AI 会根据指令生成标准职称
         position: enhancedData.position || targetTitle, 
-        yearsOfExperience: enhancedData.yearsOfExperience,
+        yearsOfExperience: Math.floor(enhancedData.yearsOfExperience || baseData.yearsOfExperience || 0),
         personalIntroduction: enhancedData.personalIntroduction,
         professionalSkills: enhancedData.professionalSkills,
         workExperience: enhancedData.workExperience,
