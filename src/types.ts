@@ -8,6 +8,8 @@ export interface ContactInfo {
   email?: string;
   /** 微信 */
   wechat?: string;
+  /** 个人网站 */
+  website?: string;
 }
 
 /**
@@ -146,6 +148,7 @@ export interface UserResumeProfile {
   certificates: string[];
   skills: string[];
   aiMessage: string;
+  website?: string;
 }
 
 /**
@@ -183,6 +186,7 @@ export function mapFrontendRequestToResumeData(payload: GenerateFromFrontendRequ
       email: profile.email,
       wechat: profile.wechat,
       phone: profile.phone,
+      website: profile.website,
     },
     avatar: profile.photo,
     languages: isEnglish ? 'english' : 'chinese',

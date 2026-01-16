@@ -109,8 +109,15 @@ export class ResumeGenerator {
     const isEnglish = languages === 'english';
     const yearSuffix = isEnglish ? (yearsOfExperience === 1 ? 'year exp' : 'years exp') : '年经验';
     items.push(`${yearsOfExperience}${yearSuffix}`);
+
+    if (contact.website) {
+      // 移除协议头
+      const displayWebsite = contact.website.replace(/^https?:\/\//, '');
+      items.push(`🔗${displayWebsite}`);
+    }
     
-    return items.join(' | ');
+    // 使用 span 包裹每个项目，便于 CSS 控制换行和分隔符
+    return items.map(item => `<span class="contact-item">${this.escapeHtml(item)}</span>`).join('');
   }
 
   /**

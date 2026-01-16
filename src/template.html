@@ -98,10 +98,22 @@
         .contact-info {
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
             font-size: 14px;
             color: #3d3d3d;
             margin-top: 5px;
+            row-gap: 5px;
+        }
+
+        .contact-item {
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+        }
+
+        .contact-item:not(:last-child)::after {
+            content: "|";
+            margin: 0 10px;
+            color: #ccc;
         }
 
         .avatar-container {
