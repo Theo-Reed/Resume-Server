@@ -807,75 +807,182 @@ export class ResumeGenerator {
           const blocks: any[] = [];
           const workItems = Array.from(document.querySelectorAll('.work-item'));
           
-          if (workItems.length === 0) return [];
-
           // 2.1 Static Top (Header + Education + First Section Title)
           // 测量第一个 Work Item 之前的空间
-          const firstWork = workItems[0];
-          const firstRect = firstWork.getBoundingClientRect();
-          const absoluteTop = firstRect.top + window.scrollY;
+          // If no work items, this logic is flawed, but resume usually has work.
+          let workStartTop = 0;
+          if (workItems.length > 0) {
+              const firstWork = workItems[0];
+              const firstRect = firstWork.getBoundingClientRect();
+              workStartTop = firstRect.top + window.scrollY;
+          } else {
+             // Fallback: measure until Skills or End
+             // Simplified: assume 0 if no work (edge case)
+          }
           
-          // 这个 Static Block 包含了 Header, Intro, Education 等所有内容
-          blocks.push({ type: 'static', height: absoluteTop }); // gap or static content
+          if (workStartTop > 0) {
+             blocks.push({ type: 'static', height: workStartTop }); 
+          }
 
           // 2.2 Process Jobs
-          workItems.forEach((item, idx) => {
-              const jobIdx = parseInt(item.getAttribute('data-job-index') || '0');
-              
-              // Job Header (Company, Position, Date)
-              const header = item.querySelector('.work-header');
-              if (header) {
-                  const r = header.getBoundingClientRect();
-                  blocks.push({ 
-                      type: 'job_header', 
-                      height: r.height, 
-                      jobIndex: jobIdx,
-                      isOrphanable: true 
-                  });
-              }
+          if (workItems.length > 0) {
+            workItems.forEach((item, idx) => {
+                const jobIdx = parseInt(item.getAttribute('data-job-index') || '0');
+                
+                // Job Header (Company, Position, Date)
+                const header = item.querySelector('.work-header');
+                if (header) {
+                    const r = header.getBoundingClientRect();
+                    blocks.push({ 
+                        type: 'job_header', 
+                        height: r.height, 
+                        jobIndex: jobIdx,
+                        isOrphanable: true 
+                    });
+                }
 
-              // Bullets
-              const bullets = Array.from(item.querySelectorAll('.responsibility-item'));
-              bullets.forEach((li, bIdx) => {
-                  const r = li.getBoundingClientRect();
-                  let effectiveHeight = r.height;
-                  
-                  // Calculate gap to next bullet if exists
-                  if (bIdx < bullets.length - 1) {
-                      const currentBottom = r.bottom; // No scrollY needed for relative diff
-                      const nextTop = bullets[bIdx+1].getBoundingClientRect().top;
-                      const gap = nextTop - currentBottom;
-                      if (gap > 0) effectiveHeight += gap;
-                  }
-                  
-                  blocks.push({
-                      type: 'job_bullet',
-                      height: effectiveHeight,
-                      jobIndex: jobIdx,
-                      bulletIndex: parseInt(li.getAttribute('data-priority') || '0') // Use data-priority or index
-                  });
-              });
+                // Bullets
+                const bullets = Array.from(item.querySelectorAll('.responsibility-item'));
+                bullets.forEach((li, bIdx) => {
+                    const r = li.getBoundingClientRect();
+                    let effectiveHeight = r.height;
+                    
+                    // Calculate gap to next bullet if exists
+                    if (bIdx < bullets.length - 1) {
+                        const currentBottom = r.bottom; 
+                        const nextTop = bullets[bIdx+1].getBoundingClientRect().top;
+                        const gap = nextTop - currentBottom;
+                        if (gap > 0) effectiveHeight += gap;
+                    }
+                    
+                    blocks.push({
+                        type: 'job_bullet',
+                        height: effectiveHeight,
+                        jobIndex: jobIdx,
+                        bulletIndex: parseInt(li.getAttribute('data-priority') || '0')
+                    });
+                });
 
-              // Gap to next item (or end)
-              if (idx < workItems.length - 1) {
-                  const nextItem = workItems[idx + 1];
-                  const currentBottom = item.getBoundingClientRect().bottom + window.scrollY;
-                  const nextTop = nextItem.getBoundingClientRect().top + window.scrollY;
-                  const gap = nextTop - currentBottom;
-                  if (gap > 0) {
-                      blocks.push({ type: 'gap', height: gap });
-                  }
-              }
-          });
+                // Gap to next item or to Bottom Section
+                // We need to be careful here. 
+                // The gap after LAST job connect to the Bottom Static Section.
+                
+                const currentRect = item.getBoundingClientRect();
+                const currentBottom = currentRect.bottom + window.scrollY;
+                
+                let nextTop = 0;
+                if (idx < workItems.length - 1) {
+                    // Gap to next job
+                    nextTop = workItems[idx + 1].getBoundingClientRect().top + window.scrollY;
+                } else {
+                    // Gap to Bottom Section (e.g. Skills Title)
+                    // The Bottom Section starts right after this work item container.
+                    // But we need to find the specific element.
+                    // The template has Work Section -> Skills Section -> Certs.
+                    // So after the last work-item, the next element is the closing of Work Section (padding?) 
+                    // or the next .section (Skills).
+                    // Actually, let's look for the next .section in document flow
+                    const workSection = item.closest('.section');
+                    if (workSection && workSection.nextElementSibling) {
+                        nextTop = workSection.nextElementSibling.getBoundingClientRect().top + window.scrollY;
+                    } else {
+                        // End of doc?
+                        nextTop = document.documentElement.scrollHeight;
+                    }
+                }
+                
+                const gap = nextTop - currentBottom;
+                if (gap > 0) {
+                    blocks.push({ type: 'gap', height: gap });
+                }
+            });
+          }
 
-          // 2.3 Static Bottom (Skills, Footer)
-          const lastWork = workItems[workItems.length - 1];
-          const lastBottom = lastWork.getBoundingClientRect().bottom + window.scrollY;
-          const totalH = document.documentElement.scrollHeight;
-          const bottomH = totalH - lastBottom;
+          // 2.3 Static Bottom (Skills, Certificates, Footer)
+          // We need to identify these blocks separately to handle pagination correctly.
+          // Look for sections AFTER the work experience section.
+          // In template: Work Exp is in a .section. Skills is next .section. Certs is next.
           
-          if (bottomH > 0) {
-              blocks.push({ type: 'static', height: bottomH });
+          let referenceElement = null;
+           // Attempt to find the Work Experience Section
+          const sections = Array.from(document.querySelectorAll('.section'));
+          // Find the section that contains work items
+          const workSection = sections.find(s => s.querySelector('.work-item'));
+          
+          if (workSection) {
+              // Iterate over following siblings (Skills, Certs)
+              let sibling = workSection.nextElementSibling;
+              
+              while (sibling) {
+                   const rect = sibling.getBoundingClientRect();
+                   const h = rect.height;
+                   // Get margin top? 
+                   const style = window.getComputedStyle(sibling);
+                   const mt = parseFloat(style.marginTop) || 0;
+                   const mb = parseFloat(style.marginBottom) || 0;
+                   
+                   // The Gap calculation in 2.2 already covers the gap from Last Work Item to the TOP of the next section (including margin).
+                   // NO, 2.2 calculates gap from Last Job BOttom to Next Section Top. So margin is effectively included in gap.
+                   // So here we just push the content height.
+                   // Actually, we should push (height + marginBottom).
+                   // But be careful about collapsing margins.
+                   // For safety, let's use bounding box height (includes padding/border) + margin bottom.
+                   
+                   // Wait, 2.2 calculated gap to `sibling.top`.
+                   // So we start from `sibling.top`.
+                   // Height = rect.height.
+                   // Then gap to next...
+                   
+                   blocks.push({ type: 'static', height: h, isOrphanable: true }); // Treat whole section as unbreakble for now? 
+                   // Ideally spread skill-items? But user demands 4x4 fixed. So 16 items.
+                   // Usually Skills section is allowed to break. 
+                   // But breaking inside a skill grid is ugly.
+                   // Breaking BETWEEN skill categories is fine.
+                   // Since we don't control skill-bullet count (it's fixed 4x4), we treat them as static blocks.
+                   // But if it's huge, we better split it.
+                   
+                   // Check if it's Skills section
+                   if (sibling.querySelector('.skill-category')) {
+                       // It's the big skills block. Split it!
+                       // Remove the block used added above, and add sub-blocks
+                       blocks.pop(); 
+                       
+                       const title = sibling.querySelector('.section-title');
+                       if (title) {
+                           blocks.push({ type: 'static', height: title.getBoundingClientRect().height + 20 }); // +margin
+                       }
+                       
+                       const cats = Array.from(sibling.querySelectorAll('.skill-category'));
+                       cats.forEach(cat => {
+                           blocks.push({ type: 'static', height: cat.getBoundingClientRect().height });
+                       });
+                   } 
+                   else {
+                       // Keep as is (e.g. Certificate Section)
+                       // Add margin bottom to height effectively?
+                       // Or just ignore margin bottom at end of doc?
+                   }
+
+                   // Gap to next sibling
+                   const currentBottom = rect.bottom + window.scrollY;
+                   const nextSib = sibling.nextElementSibling;
+                   if (nextSib) {
+                       const nextTop = nextSib.getBoundingClientRect().top + window.scrollY;
+                       const gap = nextTop - currentBottom;
+                       if (gap > 0) blocks.push({ type: 'gap', height: gap });
+                   }
+                   
+                   sibling = sibling.nextElementSibling;
+              }
+          } else {
+             // Fallback if structure is different
+             const lastWork = workItems[workItems.length - 1];
+             if (lastWork) {
+                 const lastBottom = lastWork.getBoundingClientRect().bottom + window.scrollY;
+                 const totalH = document.documentElement.scrollHeight;
+                 const bottomH = totalH - lastBottom;
+                 if (bottomH > 0) blocks.push({ type: 'static', height: bottomH });
+             }
           }
 
           return blocks;
@@ -883,200 +990,255 @@ export class ResumeGenerator {
 
       console.log(`[Metrics] Extracted ${allBlocks.length} layout blocks.`);
 
-      // 3. Simulation Solver
+      // 3. Iterative Layout Solver (The New Algorithm)
+      // 计算目标: 
+      // 1. 获取所有模块的静态高度 (gap, static, headers)
+      // 2. 获取所有 Bullet Points 的高度
+      // 3. 计算目标页数 (Round)
+      // 4. 计算需要插入多少个 Bullet 才能恰好填满目标页数
+      // 5. 将这些 Bullet 分配给各个工作 (优先最新)
+      // 6. 检查 Orphan，如果存在，执行 "减后补前" (Swap Strategy)
+
+      // A. Data Preparation
       const PAGE_HEIGHT = 1123;
-      const ORPHAN_THRESHOLD = 50; // pixels from bottom where headers aren't allowed
+      const ORPHAN_THRESHOLD = 90; // Increased threshold to catch visual orphans earlier
+      // Filter out bullets from blocks to get static height
+      const staticBlocks = allBlocks.filter(b => b.type !== 'job_bullet');
+      const staticHeight = staticBlocks.reduce((sum, b) => sum + b.height, 0);
+      
+      const allBullets = allBlocks.filter(b => b.type === 'job_bullet');
+      // Group bullets by job
+      const bulletsByJob: { [key: number]: typeof allBullets } = {};
+      allBullets.forEach(b => {
+          if (typeof b.jobIndex === 'number') {
+            if (!bulletsByJob[b.jobIndex]) bulletsByJob[b.jobIndex] = [];
+            bulletsByJob[b.jobIndex].push(b);
+          }
+      });
+      // Sort bullets by index just in case
+      Object.keys(bulletsByJob).forEach(k => {
+          bulletsByJob[parseInt(k)].sort((a,b) => (a.bulletIndex||0) - (b.bulletIndex||0));
+      });
+      
+      // B. Determine Target Pages
+      const totalContentHeight = allBlocks.reduce((s, b) => s + b.height, 0);
+      const exactPages = totalContentHeight / PAGE_HEIGHT;
+      let targetPages = Math.round(exactPages); 
+      // Special logic: If extremely close to N.5 (e.g. 1.45 - 1.55), prefer ceiling to avoid over-compression?
+      // Or prefer floor to condense? User prefers "Smart One Page" ideally. 
+      // Let's stick to Round: 1.4 -> 1, 1.6 -> 2.
+      if (targetPages < 1) targetPages = 1;
+      
+      // Calculate Budget for Bullets
+      // Total Available Height = Pages * 1123 - MarginBottom(approx 50)
+      // Bullet Budget = Total Available - Static Height
+      // Relaxed safety margin to 40 to allow slightly more content (relying on footer margin)
+      const totalAvailableHeight = (targetPages * PAGE_HEIGHT) - 40; 
+      let bulletHeightBudget = totalAvailableHeight - staticHeight;
+      if (bulletHeightBudget < 0) bulletHeightBudget = 0; // Should not happen unless static > page
+      
+      // C. Allocation Strategy (Greedy Fill)
+      // We need to pick bullets such that sum(height) <= bulletHeightBudget
+      // Strategy: 
+      // 1. Give every job at least Min Points (3)
+      // 2. Then distribute remaining budget to newest jobs first
+      
+      // numJobs already defined at top of method
+      let currentConfig = new Array(numJobs).fill(0);
+      
+      // C.1 Base Allocation (Min 3 or Max Available)
+      for (let j = 0; j < numJobs; j++) {
+          const available = bulletsByJob[j]?.length || 0;
+          const min = Math.min(3, available);
+          currentConfig[j] = min;
+          // Deduct from budget (Estimate height)
+          // We need precise height sum
+      }
+      
+      // Function to calculate total height of a config
+      const calcTotalHeight = (cfg: number[]) => {
+          let h = staticHeight;
+          for (let j = 0; j < numJobs; j++) {
+              const count = cfg[j];
+              const bullets = bulletsByJob[j] || [];
+              for (let k = 0; k < count; k++) {
+                  if (bullets[k]) h += bullets[k].height;
+              }
+          }
+          return h;
+      };
 
-      // 模拟计算某一个 Config 的得分
-      const simulateScore = (config: number[]) => {
-          let currentY = 0;
-          let pageCount = 1;
-          let waste = 0; // Space wasted by forced page breaks
-          let valid = true;
+      // C.2 Distribute Remaining Budget
+      // Priority: Job 0 > Job 1 > ... > Job N
+      // Limit: Up to available bullets
+      let canAdd = true;
+      while (canAdd) {
+          canAdd = false;
+          // Try to add one bullet to each job from top to bottom
+          for (let j = 0; j < numJobs; j++) {
+              // Check if we can add to this job
+              const currentCount = currentConfig[j];
+              const maxAvailable = bulletsByJob[j]?.length || 0;
+              
+              if (currentCount < maxAvailable) {
+                  // Check if adding this bullet fits in budget
+                  const nextBullet = bulletsByJob[j][currentCount];
+                  if (calcTotalHeight(currentConfig) + nextBullet.height <= totalAvailableHeight) {
+                      currentConfig[j]++;
+                      canAdd = true; // We added something, so loop again
+                      // But maybe we should break to restart priority from Job 0? 
+                      // "Distribute to newest jobs first" implies fill Job 0 THEN Job 1.
+                      // Let's fill Job 0 as much as possible, then Job 1.
+                      // So: break loop to restart at j=0? No, that would starve older jobs if budget is tight.
+                      // Better balanced approach? Or strictly "Rich get richer"?
+                      // Prompt says "Importance sorted". Job 0 is most important.
+                      // Let's strictly fill Job 0, then Job 1...
+                  }
+              }
+          }
+          // The above loop round-robins. If we really want "Job 0 Full first", we should change loop.
+          // Let's Stick to round robin but weighted? 
+          // Actually, let's try a prioritized filling:
+          // Fill Job 0 to Max, then Job 1...
+      }
+      
+      // Restart Allocation with Strict Priority for better result matching "Standard" scenario constraints
+      // Reset
+      currentConfig = new Array(numJobs).fill(0);
+      for (let j = 0; j < numJobs; j++) currentConfig[j] = Math.min(3, bulletsByJob[j]?.length || 0); // Base 3
+      
+      for (let j = 0; j < numJobs; j++) {
+           const maxAvailable = bulletsByJob[j]?.length || 0;
+           while (currentConfig[j] < maxAvailable) {
+               const nextBullet = bulletsByJob[j][currentConfig[j]];
+               if (calcTotalHeight(currentConfig) + nextBullet.height <= totalAvailableHeight) {
+                   currentConfig[j]++;
+               } else {
+                   break; // Budget full
+               }
+           }
+      }
 
-          // Filter blocks based on config
-          const activeBlocks = allBlocks.filter(b => {
+      console.log(`[Solver] Initial Computed Config: [${currentConfig}] for Target Pages: ${targetPages}`);
+
+      // D. Orphan Solver (Iterative Swap)
+      // Simulate Layout -> Check Orphan -> Swap
+      
+      const MAX_ITERATIONS = 10;
+      for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
+          
+          let orphanFound = false;
+          const blocks = allBlocks.filter(b => {
              if (b.type === 'job_bullet') {
-                 // Only keep bullet if index < config[jobIndex]
-                 // config: [7, 6, 5] means job 0 has 7 bullets
-                 if (b.jobIndex !== undefined && b.bulletIndex !== undefined) {
-                     return b.bulletIndex < config[b.jobIndex];
-                 }
+                 if (this.getJobConfig(currentConfig, b.jobIndex)) 
+                    return (b.bulletIndex || 0) < currentConfig[b.jobIndex!];
              }
              return true;
           });
           
-          // Run Simulation
-          for (let i = 0; i < activeBlocks.length; i++) {
-              const blk = activeBlocks[i];
+          // Simulation to find Orphan
+          let currentY = 0;
+          let pageNum = 1;
+          let orphanJobIndex = -1;
+          
+          for (let i = 0; i < blocks.length; i++) {
+              const blk = blocks[i];
               let h = blk.height;
-              
-              // Check if fits on current page
-              const spaceLeft = (PAGE_HEIGHT * pageCount) - currentY;
+              const spaceLeft = (PAGE_HEIGHT * pageNum) - currentY;
               
               if (h > spaceLeft) {
-                  // Hard Break: Block doesn't fit at all -> New Page
-                  waste += spaceLeft;
-                  pageCount++;
-                  currentY = ((pageCount - 1) * PAGE_HEIGHT) + h;
+                  pageNum++;
+                  currentY = h; 
               } else {
-                  // Fits physically. Check Orphan Rules.
-                  // If it's a header, and we are very close to bottom
-                  if (blk.isOrphanable && spaceLeft - h < ORPHAN_THRESHOLD) {
-                       // Header fits, but leaves e.g. 10px below it. 
-                       // Check if the NEXT block can fit in that 10px?
-                       // Usually next block is a bullet (~24px).
-                       // If next block doesn't fit, the Header is stranded -> Orphan.
-                       
-                       // Peak ahead
-                       let nextH = 0;
-                       if (i + 1 < activeBlocks.length) nextH = activeBlocks[i+1].height;
-                       
-                       if (spaceLeft - h < nextH) {
-                           // Next item forces break, leaving header alone.
-                           // Force Header to next page.
-                           waste += spaceLeft;
-                           pageCount++;
-                           currentY = ((pageCount - 1) * PAGE_HEIGHT) + h;
-                           continue;
-                       }
+                  // Check Orphan Header
+                  if (blk.type === 'job_header') {
+                      // If Header is at bottom
+                      if (spaceLeft - h < ORPHAN_THRESHOLD) {
+                          // Check if next block needs break
+                          let nextH = 0;
+                          if (i+1 < blocks.length) nextH = blocks[i+1].height;
+                          if(spaceLeft - h < nextH) {
+                              // Orphan Confirmed!
+                              orphanJobIndex = blk.jobIndex!;
+                              orphanFound = true;
+                              // Don't break loop, we need to know exactly which one. 
+                              // Actually we can stop at first orphan to fix it.
+                              break; 
+                          }
+                      }
                   }
                   currentY += h;
               }
           }
           
-          const totalH = currentY;
-          const lastPageH = totalH % PAGE_HEIGHT;
-          const fillRatio = (lastPageH === 0) ? 1.0 : (lastPageH / PAGE_HEIGHT);
+          if (!orphanFound) break; // Solved!
           
-          // Strict Rules
-          if (fillRatio < 0.40) valid = false; // Too empty
+          console.log(`[Solver] Iteration ${iter}: Orphan detected at Job ${orphanJobIndex}. Applying Swap Strategy.`);
           
-          // Score Calculation
-          // If valid: High Base Score + Fill + Content
-          // If invalid: Score based largely on Fill Ratio (we prefer a nicely filled page with less content over a broken page with more content)
+          // Strategy: "Subtract from Last (Earliest), Add to First (Newest)"
+          // Ideally this pushes content down, moving the orphan header to next page.
           
-          const totalItems = config.reduce((a,b)=>a+b, 0);
+          // 1. Identify Donor (Last Job with > 3 bullets)
+          let donorIndex = -1;
+          for (let j = numJobs - 1; j >= 0; j--) {
+              if (currentConfig[j] > 3) { // Keep min 3
+                  donorIndex = j;
+                  break;
+              }
+          }
           
-          let score = 0;
-          if (valid) {
-              score = 10000 + (fillRatio * 500) + (totalItems * 20) - (waste * 0.5);
+          // 2. Identify Receiver (First Job with room)
+          // Actually, we want to add BEFORE the orphan. 
+          // Adding to Job 0 is safest to push everyone down.
+          let receiverIndex = -1;
+          for (let j = 0; j < orphanJobIndex; j++) {
+              if (currentConfig[j] < (bulletsByJob[j]?.length || 0)) {
+                  receiverIndex = j;
+                  break;
+              }
+          }
+           
+          // Execute Swap
+          if (donorIndex !== -1 && receiverIndex !== -1) {
+              currentConfig[donorIndex]--;
+              currentConfig[receiverIndex]++;
+              console.log(`   -> Swapped: -Job${donorIndex} / +Job${receiverIndex}. New: [${currentConfig}]`);
           } else {
-              // If invalid (e.g. fill < 0.4), we punish strictly.
-              // We want to maximize Fill Ratio first.
-              // But we still want some content.
-              // Let's make Fill Ratio dominant. 
-              // 0.1 fill -> 100 pts. 0.3 fill -> 300 pts.
-              // Item count (40 items) -> 40 pts (weight 1).
-              score = (fillRatio * 1000) + (totalItems * 1) - (waste * 1.0);
-          }
-          
-          return { score, valid, fillRatio, pageCount, waster: waste };
-      };
-
-      // 4. Find Best via JS iteration (Fast!)
-      let bestConfig = maxConfig;
-      let bestScore = -Infinity;
-      let bestRes = null;
-
-      for (const cfg of allConfigs) {
-          const res = simulateScore(cfg);
-          if (res.score > bestScore) {
-              bestScore = res.score;
-              bestConfig = cfg;
-              bestRes = res;
-          }
-      }
-
-      console.log(`>>> Simulation Complete. Winner: [${bestConfig}]`);
-      if (bestRes) {
-          console.log(`    Score: ${bestRes.score.toFixed(1)}, Valid: ${bestRes.valid}, Pages: ${bestRes.pageCount}, Fill: ${bestRes.fillRatio.toFixed(2)}`);
-      }
-
-      // 5. Feedback Loop with Retries
-      // Render -> Check -> Adjust -> Render
-      let currentConfig = bestConfig;
-      let currentHtml = "";
-      
-      const MAX_ADJUSTMENTS = 3;
-      
-      for (let attempt = 0; attempt <= MAX_ADJUSTMENTS; attempt++) {
-          console.log(`[Render Attempt ${attempt + 1}] Config: [${currentConfig}]`);
-          
-          const ops: RenderOptions = { jobConfig: currentConfig, maxSkillItems: currentConfig[0] + 2 };
-          currentHtml = this.generateHTML(data, ops);
-          await page.setContent(currentHtml, { waitUntil: 'load' });
-          // Note: assessLayoutQuality relies on natural layout, so we don't force breaks yet, 
-          // BUT final PDF needs them. Let's apply them to see the "Real" result.
-          await this.applySmartPageBreaks(page); 
-          
-          // Measure
-          const q = await this.assessLayoutQuality(page);
-          console.log(`   -> Result: Pages ${q.pageCount}, Fill ${q.fillRatio.toFixed(2)}, Orphans ${q.hasOrphans}`);
-          
-          // Success Condition (Strict)
-          // Valid if: Fill >= 0.4 OR Single Page
-          if (q.pageCount === 1 || q.fillRatio >= 0.4) {
-              console.log(`   >>> Layout Accepted.`);
-              // Return the HTML with embedded CSS tweaks (margins, etc)
-              return await page.content();
-          }
-          
-          // Failure: Try to adjust
-          if (attempt < MAX_ADJUSTMENTS) {
-              console.warn(`   >>> Layout Rejected (Fill < 0.4). Attempting to squeeze content.`);
-              
-              // Strategy: Reduce total items
-              // Calculate how many items to remove
-              // Estimate height of last page (which is the excess height we want to remove + gap)
-              // Actually we want to remove 'Last Page Height' amount of content to fit into Previous Page.
-               
-              const totalItems = currentConfig.reduce((a,b)=>a+b, 0);
-              const lastPagePixels = q.fillRatio * 1123; // Approx
-              const avgPixelPerItem = lastPagePixels / (totalItems / q.pageCount); // Very rough estimate
-              // Or use global calibration PPS?
-              // Let's simple remove 10% of items or at least 2 items
-              
-              let itemsToRemove = Math.max(2, Math.ceil(totalItems * 0.15));
-              
-              // Construct new config
-              // We must maintain n_i >= n_{i+1} >= 3
-              const newConfig = [...currentConfig];
-              
-              // Iterate from back to front, shaving off items
-              while (itemsToRemove > 0) {
-                  let reducedSomething = false;
-                  // Try to reduce from tail (older jobs) first
-                  for (let i = newConfig.length - 1; i >= 0; i--) {
-                      if (newConfig[i] > 3) {
-                          // Check constraint: newConfig[i]-1 >= newConfig[i+1] (if i is not last)
-                          // Actually the constraint is n_i >= n_{i+1}. 
-                          // If we reduce n_i, we might violate n_{i-1} >= n_i? No, reducing current makes it smaller, so its left neighbor is fine.
-                          // But we must ensure n_i >= n_{i+1}.
-                          
-                          const nextVal = (i === newConfig.length - 1) ? 0 : newConfig[i+1];
-                          if ((newConfig[i] - 1) >= nextVal) {
-                              newConfig[i]--;
-                              itemsToRemove--;
-                              reducedSomething = true;
-                              if (itemsToRemove === 0) break;
-                          }
-                      }
-                  }
-                  if (!reducedSomething) break; // Cannot reduce further
+              // Swap Failed (No donor or No receiver)
+              // Fallback: Just Pull Up? (Remove from Predecessor of Orphan)
+              // "Reduce a point on the second work experience" (assuming orphan is 2nd or 3rd)
+              // Try to reduce the job immediately before the orphan
+              const prevJob = orphanJobIndex - 1;
+              if (prevJob >= 0 && currentConfig[prevJob] > 3) {
+                   currentConfig[prevJob]--;
+                   console.log(`   -> Swap Failed. Fallback: Reduced Job${prevJob} to Pull Up. New: [${currentConfig}]`);
+              } else {
+                   console.warn("   -> Cannot Fix Orphan. Constraints reached.");
+                   break;
               }
-              
-              // Check if we actually changed anything
-              if (newConfig.reduce((a,b)=>a+b,0) === totalItems) {
-                   console.warn("   >>> Cannot reduce further (Min constraints reached). Accepting result.");
-                   return await page.content();
-              }
-              
-              currentConfig = newConfig;
           }
       }
+
+      // E. Render Final
+      console.log(`[Solver] Final Optimized Config: [${currentConfig}]`);
+      const finalOps: RenderOptions = { jobConfig: currentConfig, maxSkillItems: currentConfig[0] + 2 };
+      const finalHtml = this.generateHTML(data, finalOps);
+      // await page.setContent(finalHtml, { waitUntil: 'load' }); // Done by caller logic steps
+      
+      // Inject CSS Adjustments (adjustLayoutDensity)
+      // We return the content string, but we need to apply density tweaks first.
+      // So we must setContent here.
+      await page.setContent(finalHtml, { waitUntil: 'load' });
+      await this.adjustLayoutDensity(page); // Final Polish
+      await this.applySmartPageBreaks(page); // Final Breaks
       
       return await page.content();
+  }
+
+  // Helper to safely access array
+  private getJobConfig(arr: number[], idx: number | undefined) {
+      if (typeof idx === 'number' && idx >= 0 && idx < arr.length) return arr[idx];
+      return 0;
   }
 
   /**

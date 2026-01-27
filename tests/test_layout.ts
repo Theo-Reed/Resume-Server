@@ -33,7 +33,19 @@ const baseData: ResumeData = {
     professionalSkills: [
         {
             title: "后端开发",
-            items: ["精通 Go/Java 语言", "熟悉高性能中间件", "具备千万级架构设计能力"]
+            items: ["精通 Go/Java 语言", "熟悉高性能中间件", "具备千万级架构设计能力", "熟悉 Docker/K8s 容器化技术"]
+        },
+        {
+            title: "前端技术",
+            items: ["熟悉 React/Vue 框架", "掌握 TypeScript/ES6+", "了解 Webpack/Vite 构建工具", "具备响应式页面开发能力"]
+        },
+        {
+            title: "数据库",
+            items: ["精通 MySQL/PostgreSQL", "熟悉 Redis/Memcached 缓存", "了解 MongoDB/Elasticsearch", "具备分库分表实战经验"]
+        },
+        {
+            title: "工程实践",
+            items: ["熟悉 Git 协同工作流", "掌握 CI/CD 自动化部署", "具备 TDD/BDD 测试意识", "熟悉 Agile/Scrum 敏捷开发"]
         }
     ],
     workExperience: [], // 将在用例中动态生成
@@ -153,6 +165,58 @@ async function runTest() {
     };
     dataE.workExperience = [longExp, longExp, longExp, longExp, longExp]; // 5 份长工作
     await generate(generator, dataE, 'test_result_E_twopages.pdf', '场景E：明显两页（测试双页布局稳定性）');
+
+    // === 场景 F: 资深专家三页 (Standard Three Pages) ===
+    // 假设有非常丰富的工作经历 (10年以上, 5-6份工作)
+    const dataF = JSON.parse(JSON.stringify(baseData));
+    dataF.yearsOfExperience = 12;
+    dataF.personalIntroduction = "拥有超过 12 年的分布式系统架构设计与落地经验，曾主导过多个亿级用户规模的核心系统重构。在云计算、微服务治理、高并发交易系统等领域有深厚积累。";
+    dataF.workExperience = [
+        {
+            company: "云端架构科技有限公司",
+            position: "首席架构师",
+            startDate: "2021-01",
+            endDate: "至今",
+            responsibilities: generateResponsibilities(8, "平台规划")
+        },
+        {
+            company: "全球支付结算中心",
+            position: "资深技术专家",
+            startDate: "2018-06",
+            endDate: "2020-12",
+            responsibilities: generateResponsibilities(7, "交易核心")
+        },
+        {
+            company: "未来数据驱动公司",
+            position: "高级研发经理",
+            startDate: "2015-03",
+            endDate: "2018-05",
+            responsibilities: generateResponsibilities(6, "大数据平台")
+        },
+        {
+            company: "早期创业孵化器",
+            position: "全栈工程师",
+            startDate: "2013-07",
+            endDate: "2015-02",
+            responsibilities: generateResponsibilities(5, "敏捷开发")
+        },
+        {
+            company: "某大型互联网集团",
+            position: "后端开发",
+            startDate: "2011-07",
+            endDate: "2013-06",
+            responsibilities: generateResponsibilities(4, "基础服务")
+        }
+    ];
+    // 增加大量技能和证书以填充空间
+    dataF.professionalSkills = [
+        { title: "架构设计", items: ["微服务架构", "领域驱动设计(DDD)", "Serverless", "Service Mesh"] },
+        { title: "编程语言", items: ["Java", "Go", "Rust", "Python"] },
+        { title: "中间件", items: ["Kafka", "RocketMQ", "RabbitMQ", "Redis"] },
+        { title: "数据库", items: ["MySQL", "PostgreSQL", "MongoDB", "TiDB"] }
+    ];
+    
+    await generate(generator, dataF, 'test_result_F_threepages.pdf', '场景F：资深专家三页（测试多页长文档布局）');
 
     await generator.close();
     console.log('所有测试已完成。');

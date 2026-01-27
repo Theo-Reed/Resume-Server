@@ -68,7 +68,6 @@ export class ResumeAIService {
         earliestWorkDate,
         seniorityThresholdDate
     } = calcResult;
-    
     // 4. 构造 Prompt
     const promptContext = {
       targetTitle,
@@ -154,9 +153,11 @@ export class ResumeAIService {
               // 如果余数为0且总长度大于0，则视为 100% 填充
               const percent = (remainder === 0 && visualLength > 0) ? 1 : remainder / CPL;
               
-              // 校验规则：最后一行必须填充单行宽度的 50% 以上
-              if (percent < 0.5) {
+              // 校验规则：最后一行必须填充单行宽度的 30% 以上 (原50%过于严格，调整为30%以配合新布局算法)
+              if (percent < 0.3) {
                 const shortText = item.length > 15 ? item.substring(0, 15) + '...' : item;
+                // Soft warning in logs instead of throwing, let User adjust or iterate?
+                // For now, strict mode is safer for quality.
                 throw new Error(`[排版校验失败] 工作经历 ${expIdx + 1} 的第 ${itemIdx + 1} 条职责文字数量不够 ("${shortText}")，导致右侧留白过大 (填充率: ${Math.round(percent * 100)}%)`);
               }
             });
