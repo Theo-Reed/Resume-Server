@@ -1,18 +1,12 @@
 {
   "name": "puppet-resume",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "main": "dist/server.js",
   "scripts": {
     "build": "tsc && npm run copy-assets",
     "copy-assets": "copyfiles -u 1 src/template.html dist",
     "start": "node dist/server.js",
     "dev": "ts-node src/server.ts",
-    "dev:example": "ts-node src/index.ts",
-    "dev:example:with-avatar": "ts-node src/index.ts with-avatar",
-    "dev:example:without-avatar": "ts-node src/index.ts without-avatar",
-    "dev:test-data": "ts-node src/index.ts test-data",
-    "test:gemini": "ts-node src/geminiService.ts",
-    "test:full": "ts-node tests/full_flow_test.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
