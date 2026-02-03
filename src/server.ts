@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import multer, { FileFilterCallback } from 'multer';
 import { randomUUID } from 'crypto';
-import { writeFileSync, mkdirSync, existsSync } from 'fs';
+import { writeFileSync, mkdirSync, existsSync, readdirSync, statSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import * as dotenv from 'dotenv';
 import { runBackgroundTask, TaskServices } from './taskRunner';
@@ -94,6 +94,33 @@ app.get('/health', (req: Request, res: Response) => {
  */
 const PORT = process.env.PORT || 3000;
 
+/**
+ * 自动清理一天以前的物理文件，但保留数据库元数据
+ */
+function cleanupExpiredPdfs() {
+  try {
+    const files = readdirSync(RESUMES_DIR);
+    const now = Date.now();
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+    let count = 0;
+
+    files.forEach(file => {
+      if (!file.endsWith('.pdf')) return;
+      const filePath = join(RESUMES_DIR, file);
+      const stats = statSync(filePath);
+      if (now - stats.mtimeMs > ONE_DAY_MS) {
+        unlinkSync(filePath);
+        count++;
+      }
+    });
+    if (count > 0) {
+      console.log(`🧹 已自动清理 ${count} 个超过 24 小时的旧 PDF 文件（本地存储已释放）`);
+    }
+  } catch (err) {
+    console.error('❌ 清理过期 PDF 失败:', err);
+  }
+}
+
 async function startServer() {
   // 🚀 Step 0: 环境检查
   generator.checkEnvironment();
@@ -110,6 +137,12 @@ async function startServer() {
       { $set: { status: 'failed', error: 'Server Reboot Cleaned' } }
     );
     console.log('🧹 启动前任务清理完成');
+
+    // 🚀 Step 3: 清理过期物理文件
+    cleanupExpiredPdfs();
+    // 每小时运行一次清理
+    setInterval(cleanupExpiredPdfs, 60 * 60 * 1000);
+
   } catch (error) {
     console.warn('❌ 无法连接到数据库，服务器启动失败');
     process.exit(1);

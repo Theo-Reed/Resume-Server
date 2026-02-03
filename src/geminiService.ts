@@ -62,7 +62,7 @@ export class GeminiService {
   /**
    * 核心调用方法：带重试机制和结果校验
    * @param prompt 提示词
-   * @param validator 可选的校验函数，返回 false 或抛出错误将触发重试
+   * @param validator 可选的校验函数
    */
   async generateContent(prompt: string, validator?: (text: string) => boolean | Promise<boolean>): Promise<string> {
     const models = [
@@ -71,44 +71,54 @@ export class GeminiService {
       "gemini-2.5-pro",
     ];
 
-    for (const modelName of models) {
-      try {
-        console.log(`🤖 尝试使用模型: ${modelName}`);
-        const genAI = new GoogleGenerativeAI(this.apiKey);
+    const attempts = 3;
+    
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      console.log(`\n🤖 [Attempt ${attempt}/${attempts}] 正在尝试调用 AI...`);
 
-        const model = genAI.getGenerativeModel(
-          { model: modelName },
-          { baseUrl: this.baseUrl }
-        );
+      for (const modelName of models) {
+        try {
+          console.log(`   - 尝试使用模型: ${modelName}`);
+          const genAI = new GoogleGenerativeAI(this.apiKey);
+          const model = genAI.getGenerativeModel(
+            { model: modelName },
+            { baseUrl: this.baseUrl }
+          );
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          const text = response.text();
 
-        // 执行逻辑校验
-        if (validator) {
-          try {
-            const isValid = await validator(text);
-            if (!isValid) {
-              throw new Error("模型输出未通过逻辑校验 (包含非法或空值)");
+          // 执行逻辑校验
+          if (validator) {
+            try {
+              const isValid = await validator(text);
+              if (!isValid) throw new Error("模型输出未通过逻辑校验");
+            } catch (valError: any) {
+              console.warn(`      ⚠️ ${modelName} 输出校验失败: ${valError.message}`);
+              throw valError; 
             }
-          } catch (valError: any) {
-            console.warn(`⚠️ ${modelName} 输出校验失败: ${valError.message}`);
-            console.warn(`📄 [非法内容快照] 如下: \n${text}`); // 🚀 在日志中记录非法内容
-            throw valError; // 重新抛出以触发 catch 块中的重试逻辑
           }
-        }
 
-        console.log(`✅ ${modelName} 调用成功`);
-        return text;
-      } catch (error: any) {
-        console.error(`❌ ${modelName} 处理失败:`, error.message);
-
-        // 如果是最后一个模型也失败了，则抛出最终错误
-        if (modelName === models[models.length - 1]) {
-          throw new Error(`所有 Gemini 模型均无法生成合法内容: ${error.message}`);
+          console.log(`   ✅ ${modelName} 调用成功`);
+          return text;
+        } catch (error: any) {
+          console.error(`      ❌ ${modelName} 失败:`, error.message);
+          // 继续尝试下一个模型
         }
-        console.log("🔄 正在尝试切换到下一个模型...");
+      }
+
+      // 如果所有模型都试过了但还是失败了
+      if (attempt < attempts) {
+        // 计算等待时间 (10-30s 或 20-40s)
+        const minWait = attempt === 1 ? 10 : 20;
+        const maxWait = attempt === 1 ? 30 : 40;
+        const waitSec = Math.floor(Math.random() * (maxWait - minWait + 1)) + minWait;
+        
+        console.log(`\n⚠️ 所有模型在 Attempt ${attempt} 中均失败。系统将在 ${waitSec} 秒后重试...`);
+        await new Promise(resolve => setTimeout(resolve, waitSec * 1000));
+      } else {
+        throw new Error(`经过 ${attempts} 次重试且尝试了所有候选模型后，AI 仍无法提供有效回复。请稍后再试。`);
       }
     }
 

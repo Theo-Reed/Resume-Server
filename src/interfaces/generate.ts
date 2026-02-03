@@ -34,21 +34,17 @@ router.post('/generate', async (req: Request, res: Response) => {
     });
 
     if (existingTask) {
-      // 检查任务是否已经超过 10 分钟
+      // 检查任务是否已经超过 10 分钟 (僵死检查)
       const taskAgeMinutes = (Date.now() - new Date(existingTask.createTime).getTime()) / (1000 * 60);
       if (taskAgeMinutes > 10) {
-        // 10分钟还没跑完，极大概率是服务器重启或进程崩了导致的僵死状态
-        console.log(`⚠️ 发现僵死任务 ${existingTask.task_id} (已持续 ${taskAgeMinutes.toFixed(1)} 分钟)，自动清理并允许重新生成。`);
+        console.log(`⚠️ 发现僵死任务 ${existingTask.task_id} (已持续 ${taskAgeMinutes.toFixed(1)} 分钟)，自动清理。`);
         await db.collection(COLLECTION_RESUMES).updateOne(
           { _id: existingTask._id }, 
           { $set: { status: 'failed', error: 'Task Timeout (Auto Cleaned)' } }
         );
-      } else {
-        return res.status(409).json({
-          success: false,
-          message: '该岗位的简历还在生成中，请耐心等待，无需重复提交。'
-        });
       }
+      // 注意：根据用户要求（1分钟内发起多次生成并排队），此处不再返回 409 拦截，
+      // 而是允许新任务进入队列。p-limit(2) 会在后台保证同时运行的任务数受控。
     }
     // --- Concurrent Task Check End ---
 

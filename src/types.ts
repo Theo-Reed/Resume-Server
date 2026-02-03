@@ -160,6 +160,7 @@ export interface GenerateFromFrontendRequest {
   language?: string;
   resume_profile: UserResumeProfile;
   job_data: JobData;
+  enhancedData?: ResumeData; // 用于物理文件过期后的快速恢复（免AI调用）
 }
 
 /**

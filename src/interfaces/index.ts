@@ -34,6 +34,7 @@ import batchSaveJobs from './batchSaveJobs';
 import login from './login';
 import upload from './upload';
 import retryGenerateResume from './retryGenerateResume';
+import restoreResume from './restoreResume';
 
 const router = Router();
 
@@ -48,6 +49,7 @@ router.use('/api', clearAllSearchConditions);
 router.use('/api', createOrder);
 router.use('/api', deleteGeneratedResume);
 router.use('/api', retryGenerateResume);
+router.use('/api', restoreResume);
 router.use('/api', generate);
 router.use('/api', payCallback);
 router.use('/api/search', deleteSearchCondition);
