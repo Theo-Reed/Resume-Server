@@ -39,14 +39,14 @@ router.post('/createOrder', async (req: Request, res: Response) => {
     if (scheme.type !== 'topup' && isMemberActive && targetLevel > currentLevel) {
         orderType = 'upgrade';
         
-        // Map current level to its "Trade-in" value
+        // Map current level to its "Trade-in" value (in Cents)
         let deduction = 0;
-        if (currentLevel === 1) deduction = 500;   // Value of Trial (Gifted)
-        if (currentLevel === 2) deduction = 990;   // Value of Sprint card
-        if (currentLevel === 3) deduction = 1990;  // Value of Standard card
+        if (currentLevel === 1) deduction = 990;   // Value of Trial
+        if (currentLevel === 2) deduction = 1990;  // Value of Sprint card
+        if (currentLevel === 3) deduction = 8990;  // Value of Standard card
 
-        // Calculate upgrade price (with a minimum floor, e.g., ¥0.01 or ¥0)
-        payAmount = Math.max(0, scheme.price - deduction);
+        // Calculate upgrade price (with a minimum floor of 1 cent for WeChat Pay)
+        payAmount = Math.max(1, scheme.price - deduction);
     }
     // Note: Same level or Topup or Expired user pays full price (since they stack or restart)
 

@@ -11,6 +11,7 @@ const publicCertPath = process.env.WX_PUBLIC_CERT_PATH || 'apiclient_cert.pem';
 
 let pay: any = null;
 let privateKeyContent: Buffer | null = null;
+let publicCertContent: Buffer | null = null;
 
 export const getWxPayClient = (): any => {
   if (pay) return pay;
@@ -19,18 +20,23 @@ export const getWxPayClient = (): any => {
     const pkPath = path.resolve(process.cwd(), privateKeyPath);
     const pubPath = path.resolve(process.cwd(), publicCertPath);
     
-    if (!fs.existsSync(pkPath) || !fs.existsSync(pubPath)) {
-        throw new Error('Cert files not found at ' + pkPath);
+    if (!fs.existsSync(pkPath)) {
+        throw new Error('Merchant private key file not found at ' + pkPath);
+    }
+    if (!fs.existsSync(pubPath)) {
+        throw new Error('Public key/cert file not found at ' + pubPath);
     }
 
     privateKeyContent = fs.readFileSync(pkPath);
-    const publicCert = fs.readFileSync(pubPath);
+    publicCertContent = fs.readFileSync(pubPath);
 
     pay = new WxPay({
       appid: process.env.WX_APPID || '',
       mchid: process.env.WX_MCHID || '',
-      publicKey: publicCert,
+      publicKey: publicCertContent,
       privateKey: privateKeyContent,
+      key: process.env.WX_API_V3_KEY || '',
+      serial_no: process.env.WX_CERT_SERIAL_NO || '',
     });
 
     return pay;
@@ -42,7 +48,8 @@ export const getWxPayClient = (): any => {
 export const hasWxConfig = () => {
     try {
         const pkPath = path.resolve(process.cwd(), privateKeyPath);
-        return fs.existsSync(pkPath) && !!process.env.WX_APPID;
+        const pubPath = path.resolve(process.cwd(), publicCertPath);
+        return fs.existsSync(pkPath) && fs.existsSync(pubPath) && !!process.env.WX_APPID && !!process.env.WX_MCHID;
     } catch { return false; }
 }
 

@@ -10,9 +10,9 @@ async function main() {
     
     await db.collection('member_schemes').deleteMany({});
     await db.collection('member_schemes').insertMany([
-      { scheme_id: 1, displayName: '试用会员', price: 9.9, quota: 1, type: 'trial' },
-      { scheme_id: 2, displayName: '基础会员', price: 19.9, quota: 10, type: 'basic' },
-      { scheme_id: 3, displayName: '高级会员', price: 89.9, quota: 100, type: 'pro' }
+      { scheme_id: 1, name: '试用会员', name_chinese: '试用会员', price: 990, quota: 1, type: 'trial', level: 1 },
+      { scheme_id: 2, name: '冲刺卡', name_chinese: '冲刺卡', price: 1990, quota: 5, type: 'sprint', level: 2 },
+      { scheme_id: 3, name: '标准会员', name_chinese: '标准会员', price: 8990, quota: 100, type: 'standard', level: 3 }
     ]);
     
     // Also clear users to test new initUser

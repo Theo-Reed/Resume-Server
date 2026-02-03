@@ -33,11 +33,11 @@ router.post('/calculatePrice', async (req: Request, res: Response) => {
 
     if (scheme.type !== 'topup' && isMemberActive && targetLevel > currentLevel) {
         let deduction = 0;
-        if (currentLevel === 1) deduction = 500;   // Value of Trial (Gifted)
-        if (currentLevel === 2) deduction = 990;   // Value of Sprint card
-        if (currentLevel === 3) deduction = 1990;  // Value of Standard card (Monthly)
+        if (currentLevel === 1) deduction = 990;   // Value of Trial
+        if (currentLevel === 2) deduction = 1990;  // Value of Sprint card
+        if (currentLevel === 3) deduction = 8990;  // Value of Standard card (Monthly)
 
-        payAmount = Math.max(0, scheme.price - deduction);
+        payAmount = Math.max(1, scheme.price - deduction);
         isUpgrade = true;
     }
 
