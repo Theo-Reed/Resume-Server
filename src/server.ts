@@ -102,6 +102,14 @@ async function startServer() {
   try {
     db = await connectToLocalMongo();
     console.log('✅ 使用本地 MongoDB 作为默认数据库');
+
+    // 🚀 Step 2: 启动时清理僵死任务
+    // 如果服务器异常重启，之前的 processing 任务将永远卡住，需统一重置
+    await db.collection(COLLECTION_RESUMES).updateMany(
+      { status: 'processing' },
+      { $set: { status: 'failed', error: 'Server Reboot Cleaned' } }
+    );
+    console.log('🧹 启动前任务清理完成');
   } catch (error) {
     console.warn('❌ 无法连接到数据库，服务器启动失败');
     process.exit(1);

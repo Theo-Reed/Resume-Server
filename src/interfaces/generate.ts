@@ -34,10 +34,21 @@ router.post('/generate', async (req: Request, res: Response) => {
     });
 
     if (existingTask) {
-      return res.status(409).json({
-        success: false,
-        message: '该岗位的简历还在生成中，请耐心等待，无需重复提交。'
-      });
+      // 检查任务是否已经超过 10 分钟
+      const taskAgeMinutes = (Date.now() - new Date(existingTask.createTime).getTime()) / (1000 * 60);
+      if (taskAgeMinutes > 10) {
+        // 10分钟还没跑完，极大概率是服务器重启或进程崩了导致的僵死状态
+        console.log(`⚠️ 发现僵死任务 ${existingTask.task_id} (已持续 ${taskAgeMinutes.toFixed(1)} 分钟)，自动清理并允许重新生成。`);
+        await db.collection(COLLECTION_RESUMES).updateOne(
+          { _id: existingTask._id }, 
+          { $set: { status: 'failed', error: 'Task Timeout (Auto Cleaned)' } }
+        );
+      } else {
+        return res.status(409).json({
+          success: false,
+          message: '该岗位的简历还在生成中，请耐心等待，无需重复提交。'
+        });
+      }
     }
     // --- Concurrent Task Check End ---
 
