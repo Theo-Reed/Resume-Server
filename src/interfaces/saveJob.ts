@@ -1,25 +1,40 @@
 import { Router, Request, Response } from 'express';
+import { getDb } from '../db';
 
 const router = Router();
 
 // Used in: pages/job-detail/index.ts
 router.post('/saveJob', async (req: Request, res: Response) => {
   try {
-    const { jobId, type, createdAt } = req.body;
-    // const openid = ...
+    const { jobId } = req.body;
+    const openid = req.headers['x-openid'] as string;
 
-    // Logic:
-    // Insert into 'saved_jobs' table
+    if (!openid || !jobId) {
+      return res.status(400).json({ success: false, message: 'Missing openid or jobId' });
+    }
+
+    const db = getDb();
+    await db.collection('saved_jobs').updateOne(
+        { openid, jobId },
+        { 
+            $set: { 
+                openid, 
+                jobId, 
+                createdAt: new Date() 
+            } 
+        },
+        { upsert: true }
+    );
     
     res.json({
       success: true,
       result: {
-        _id: 'new_saved_job_id',
         errMsg: 'collection.add:ok'
       }
     });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+  } catch (error: any) {
+    console.error('saveJob error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Internal server error' });
   }
 });
 

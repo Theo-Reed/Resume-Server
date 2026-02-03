@@ -156,7 +156,7 @@ export interface UserResumeProfile {
  */
 export interface GenerateFromFrontendRequest {
   jobId: string;
-  userId: string;
+  openid: string; // Standardized from userId
   language?: string;
   resume_profile: UserResumeProfile;
   job_data: JobData;

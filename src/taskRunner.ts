@@ -66,7 +66,7 @@ async function executeTask(taskId: string, payload: GenerateFromFrontendRequest,
     await generator.init();
     
     const timestamp = Date.now();
-    const fileName = `${payload.userId}_${timestamp}_${taskId}.pdf`;
+    const fileName = `${payload.openid}_${timestamp}_${taskId}.pdf`;
     const filePath = join(RESUMES_DIR, fileName);
     const fileUrl = `/public/resumes/${fileName}`;
 

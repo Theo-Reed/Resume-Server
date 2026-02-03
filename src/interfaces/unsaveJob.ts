@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { getDb } from '../db';
 
 const router = Router();
 
@@ -6,17 +7,22 @@ const router = Router();
 router.post('/unsaveJob', async (req: Request, res: Response) => {
   try {
     const { jobId } = req.body;
-    // const openid = ...
+    const openid = req.headers['x-openid'] as string;
 
-    // Logic:
-    // Delete from 'saved_jobs' where userId = openid AND jobId = jobId
+    if (!openid || !jobId) {
+       return res.status(400).json({ success: false, message: 'Missing openid or jobId' });
+    }
+
+    const db = getDb();
+    await db.collection('saved_jobs').deleteOne({ openid, jobId });
     
     res.json({
       success: true,
       result: { success: true }
     });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error' });
+  } catch (error: any) {
+    console.error('unsaveJob error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Internal server error' });
   }
 });
 

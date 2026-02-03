@@ -100,7 +100,7 @@ app.post('/api/generate', async (req: MulterRequest, res: Response) => {
     }
 
     const payload = req.body as GenerateFromFrontendRequest;
-    const openid = req.headers['x-openid'] as string || payload.userId;
+    const openid = req.headers['x-openid'] as string || payload.openid;
 
     if (!openid) {
       return res.status(401).json({ success: false, message: 'Unauthorized: Missing OpenID' });
@@ -115,7 +115,7 @@ app.post('/api/generate', async (req: MulterRequest, res: Response) => {
 
     // --- Concurrent Task Check Start ---
     const existingTask = await db.collection(COLLECTION_RESUMES).findOne({
-      _openid: openid,
+      openid: openid,
       jobId: payload.jobId,
       status: 'processing'
     });
@@ -147,14 +147,14 @@ app.post('/api/generate', async (req: MulterRequest, res: Response) => {
       // Use Monthly Quota
       consumedType = 'monthly';
       await db.collection('users').updateOne(
-        { openid: payload.userId },
+        { openid: openid },
         { $inc: { 'membership.pts_quota.used': 1 } }
       );
     } else if (topupBalance > 0) {
       // Use Top-up Quota
       consumedType = 'topup';
       await db.collection('users').updateOne(
-        { openid: payload.userId },
+        { openid: openid },
         { $inc: { 'membership.topup_quota': -1 } }
       );
     } else {
@@ -175,7 +175,7 @@ app.post('/api/generate', async (req: MulterRequest, res: Response) => {
     // 2. 预先入库（立即执行）
     console.log(`📡 正在创建任务: ${taskId}`);
     await db.collection(COLLECTION_RESUMES).insertOne({
-      _openid: payload.userId,
+      openid: openid,
       task_id: taskId,
       status: 'processing',
       jobTitle: payload.job_data.title,

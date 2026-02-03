@@ -35,10 +35,7 @@ router.post('/retryGenerateResume', async (req: Request, res: Response) => {
 
     const resume = await resumesCollection.findOne({ 
         _id: queryId,
-        $or: [
-            { userId: effectiveOpenId },
-            { _openid: effectiveOpenId }
-        ]
+        openid: effectiveOpenId
     });
 
     if (!resume) {
@@ -77,7 +74,7 @@ router.post('/retryGenerateResume', async (req: Request, res: Response) => {
     }
 
     const payload: GenerateFromFrontendRequest = {
-        userId: effectiveOpenId,
+        openid: effectiveOpenId,
         jobId: resume.jobId || jobData._id,
         resume_profile: resume.resumeInfo, 
         job_data: jobData,

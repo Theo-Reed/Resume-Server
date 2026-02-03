@@ -7,22 +7,32 @@ export const activateMembershipByOrder = async (orderId: string) => {
     const schemesCol = db.collection('member_schemes');
     const usersCol = db.collection('users');
 
-    // 1. Get Order
+    // 1. Get Order with state check
     const order = await ordersCol.findOne({ _id: new ObjectId(orderId) });
-    if (!order) throw new Error('Order not found');
-    
-    // Check if already processed to avoid duplicates (idempotency)
-    // Assuming status 'paid' means processed.
-    // If we call this from payCallback, we might update status here or before.
-    // Let's assume this function handles the fulfillment logic ONLY.
+    if (!order) {
+        console.error(`[Membership] Order ${orderId} not found`);
+        throw new Error('Order not found');
+    }
+
+    // Idempotency check: if order is already paid, don't process again
+    if (order.status === 'paid') {
+        console.log(`[Membership] Order ${orderId} already processed. Skipping.`);
+        return await usersCol.findOne({ openid: order.openid });
+    }
     
     // 2. Get Scheme
     const scheme = await schemesCol.findOne({ scheme_id: order.scheme_id });
-    if (!scheme) throw new Error('Scheme not found');
+    if (!scheme) {
+        console.error(`[Membership] Scheme ${order.scheme_id} not found for order ${orderId}`);
+        throw new Error('Scheme not found');
+    }
     
     // 3. Update User
     const user = await usersCol.findOne({ openid: order.openid });
-    if (!user) throw new Error('User not found');
+    if (!user) {
+        console.error(`[Membership] User ${order.openid} not found for order ${orderId}`);
+        throw new Error('User not found');
+    }
 
     const update: any = {};
     const now = new Date();

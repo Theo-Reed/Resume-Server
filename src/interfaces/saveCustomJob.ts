@@ -24,7 +24,7 @@ router.post('/saveCustomJob', async (req: Request, res: Response) => {
     const collection = db.collection('custom_jobs');
 
     const newJob = {
-      userId: openid,
+      openid: openid,
       title: title,
       title_chinese: title,
       description_chinese: content,

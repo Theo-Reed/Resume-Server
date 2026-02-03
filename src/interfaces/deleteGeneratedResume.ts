@@ -34,10 +34,7 @@ router.post('/deleteGeneratedResume', async (req: Request, res: Response) => {
     // 1. Find the resume verify ownership
     const resume = await collection.findOne({ 
         _id: queryId,
-        $or: [
-            { userId: effectiveOpenId },
-            { _openid: effectiveOpenId }
-        ]
+        openid: effectiveOpenId
     });
 
     if (!resume) {
