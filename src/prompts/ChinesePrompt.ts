@@ -142,25 +142,26 @@ ${existingExpText}
 ### 📝 写作要求
 1. **职责描述 (Responsibilities)**：
    - **数量强制要求**：**必须（MUST）为每段工作经历生成且仅生成 8 条描述**。
-   - **长度精准控制**：每条职责描述的视觉字数点数（中文字符计1点，英数/标点计0.5点）必须精准控制在 **${Math.floor((context.maxCharPerLine || 42) * 1.6)} 到 ${Math.floor((context.maxCharPerLine || 42) * 1.9)}** 点之间。
+   - **长度精准控制**：每条职责描述的视觉字数点数（中文计1点，英数计0.5点，标点计1点）必须精准控制在 **${Math.floor((context.maxCharPerLine || 42) * 1.85)} 到 ${Math.floor((context.maxCharPerLine || 42) * 2.15)}** 点之间。
+   - **视觉效果**：确保每条职责在视觉上是饱满的两行，第二行不得短于该行的 2/3。
    - **重要性排序**：必须按重要性从高到低排列。
    - **STAR法则 + 数据化**：必须包含具体数据/百分比/量级，突出"我"的主导作用。
    - **严禁空泛形容词**：禁止使用"大幅提升"、"显著改善"等无数据支撑的词汇。
 2. **个人简介 (IMPORTANT)**：
    - 表现为 "${targetTitle}" 领域的资深专业人士。
-   - **段落点数精准控制** (视觉字数点数：中文1，英数0.5)：
-     - **第一段**：字数点数必须在 **${Math.floor((context.maxCharPerLine || 50) * 2.7)} 到 ${Math.floor((context.maxCharPerLine || 50) * 3.1)}** 之间。
-     - **第二段**：字数点数必须在 **${Math.floor((context.maxCharPerLine || 50) * 1.3)} 到 ${Math.floor((context.maxCharPerLine || 50) * 1.7)}** 之间。
+   - **段落点数精准控制** (视觉字数点数：中文1，英数0.5，标点1)：
+     - **第一段**：字数点数必须在 **${Math.floor((context.maxCharPerLine || 44) * 2.7)} 到 ${Math.floor((context.maxCharPerLine || 44) * 3.1)}** 之间。
+     - **第二段**：字数点数必须在 **${Math.floor((context.maxCharPerLine || 44) * 1.3)} 到 ${Math.floor((context.maxCharPerLine || 44) * 1.7)}** 之间。
    - **内容倾向**：第一段侧重技术栈深度与行业广度，第二段侧重启发性成果、方法论或软技能。
    - **严禁使用带小数点的年限**：禁止写“拥有 5.8 年经历”，必须四舍五入为整数。
 3. **技能列表 (Skills)**：
    - **结构强制要求**：**必须生成 4 组技能分类，且每组分类必须包含且仅包含 4 条技能点**。
-   - **高度要求**：每条技能点的视觉点数必须在 **16 到 22** 点之间。
+   - **高度要求**：每条技能点的视觉点数必须在 **16 到 24** 点之间。
    - **针对性**：生成的技能组必须完全服务于"${targetTitle}"。
 4. **排版 (Strict Quantity Control)**：
    - **加粗 (<b>)**：指定位置使用：
      - 个人介绍第一段的核心身份（1个）。
-     - **每段**工作经历的第一条职责中的核心关键词（每段 1 个）。
+     - **每段**工作经历的第一条职责中的核心关键词（每段 1 个）。**注意：关键词必须自然嵌入句子中（如"优化了 <b>高并发</b> 场景"），严禁使用"关键词：描述"这种前缀冒号格式**。
    - **下划线 (<u>)**：剩余的 **3-4 个** 名额随机分布在核心数据或项目名称上。
    - **严禁重叠**：同一处文本不得同时加粗且加下划线。
 5. **内容填充密度控制**：
@@ -173,12 +174,12 @@ ${existingExpText}
 {
   "position": "...",
   "yearsOfExperience": ${context.finalTotalYears},
-  "personalIntroduction": "第一段 (${Math.floor((context.maxCharPerLine || 50) * 2.7)}-${Math.floor((context.maxCharPerLine || 50) * 3.1)}点)\n\n第二段 (${Math.floor((context.maxCharPerLine || 50) * 1.3)}-${Math.floor((context.maxCharPerLine || 50) * 1.7)}点)...",
+  "personalIntroduction": "第一段 (${Math.floor((context.maxCharPerLine || 44) * 2.7)}-${Math.floor((context.maxCharPerLine || 44) * 3.1)}点)\n\n第二段 (${Math.floor((context.maxCharPerLine || 44) * 1.3)}-${Math.floor((context.maxCharPerLine || 44) * 1.7)}点)...",
   "professionalSkills": [
-    { "title": "分类1", "items": ["技能1", "技能2", "技能3", "技能4" ] },
-    { "title": "分类2", "items": ["技能1", "技能2", "技能3", "技能4" ] },
-    { "title": "分类3", "items": ["技能1", "技能2", "技能3", "技能4" ] },
-    { "title": "分类4", "items": ["技能1", "技能2", "技能3", "技能4" ] }
+    { "title": "分类1", "items": ["技能1 (16-24点)", "技能2 (16-24点)", "技能3 (16-24点)", "技能4 (16-24点)"] },
+    { "title": "分类2", "items": ["技能1 (16-24点)", "技能2 (16-24点)", "技能3 (16-24点)", "技能4 (16-24点)"] },
+    { "title": "分类3", "items": ["技能1 (16-24点)", "技能2 (16-24点)", "技能3 (16-24点)", "技能4 (16-24点)"] },
+    { "title": "分类4", "items": ["技能1 (16-24点)", "技能2 (16-24点)", "技能3 (16-24点)", "技能4 (16-24点)"] }
   ],
   "workExperience": [
     {
