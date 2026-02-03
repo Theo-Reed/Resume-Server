@@ -76,15 +76,28 @@ export const getMiniProgramPaymentParams = async (
   
   if (result.status !== 200 && result.status !== 204 && result.status !== 202) {
       console.error('WxPay Error:', result.data);
-      throw new Error(`WeChat Pay API Error: ${result.status}`);
+      throw new Error(`WeChat Pay API Error: ${result.status} ${JSON.stringify(result.data)}`);
+  }
+
+  // Handle wechatpay-node-v3 automatic signing (Version 2.x+)
+  // The library often returns the full signed object directly in result.data
+  if (result.data && result.data.paySign && result.data.package) {
+      return {
+          timeStamp: result.data.timeStamp,
+          nonceStr: result.data.nonceStr,
+          package: result.data.package,
+          signType: result.data.signType || 'RSA',
+          paySign: result.data.paySign
+      };
   }
 
   const { prepay_id } = result.data as any;
   if (!prepay_id) {
-      throw new Error('No prepay_id returned from WeChat Pay');
+      console.error('Incompatible WeChat Pay Response Structure:', result.data);
+      throw new Error('No prepay_id returned from WeChat Pay and no signed params found');
   }
 
-  // Generate Sign for Mini Program
+  // Generate Sign for Mini Program (Fallback for older versions or different configurations)
   const appId = process.env.WX_APPID || '';
   const timeStamp = Math.floor(Date.now() / 1000).toString();
   const nonceStr = crypto.randomBytes(16).toString('hex');
