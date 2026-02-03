@@ -568,6 +568,9 @@ export class ResumeGenerator {
    */
   private formatText(text: string): string {
     if (!text) return '';
+
+    // 适配 Gemini 偶尔生成的 Markdown 格式作为兜底
+    text = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
     
     // 先处理换行符，将 \n\n 转为双换行标识，\n 转为单换行标识
     // 这样可以确保 AI 返回的段落结构在模板中得以体现

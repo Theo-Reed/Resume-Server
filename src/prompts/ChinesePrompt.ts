@@ -149,8 +149,8 @@ ${existingExpText}
 2. **个人简介 (IMPORTANT)**：
    - 表现为 "${targetTitle}" 领域的资深专业人士。
    - **段落点数精准控制** (视觉字数点数：中文1，英数0.5)：
-     - **第一段**：字数点数必须在 **${Math.floor((context.maxCharPerLine || 50) * 2.7)} 到 ${Math.floor((context.maxCharPerLine || 50) * 3.1)}** 之间（旨在呈现为完整的 3 行，严禁超过 4 行）。
-     - **第二段**：字数点数必须在 **${Math.floor((context.maxCharPerLine || 50) * 1.3)} 到 ${Math.floor((context.maxCharPerLine || 50) * 1.7)}** 之间（旨在呈现为 1.5 行左右展示）。
+     - **第一段**：字数点数必须在 **${Math.floor((context.maxCharPerLine || 50) * 2.7)} 到 ${Math.floor((context.maxCharPerLine || 50) * 3.1)}** 之间。
+     - **第二段**：字数点数必须在 **${Math.floor((context.maxCharPerLine || 50) * 1.3)} 到 ${Math.floor((context.maxCharPerLine || 50) * 1.7)}** 之间。
    - **内容倾向**：第一段侧重技术栈深度与行业广度，第二段侧重启发性成果、方法论或软技能。
    - **严禁使用带小数点的年限**：禁止写“拥有 5.8 年经历”，必须四舍五入为整数。
 3. **技能列表 (Skills)**：
@@ -175,10 +175,10 @@ ${existingExpText}
   "yearsOfExperience": ${context.finalTotalYears},
   "personalIntroduction": "第一段 (${Math.floor((context.maxCharPerLine || 50) * 2.7)}-${Math.floor((context.maxCharPerLine || 50) * 3.1)}点)\n\n第二段 (${Math.floor((context.maxCharPerLine || 50) * 1.3)}-${Math.floor((context.maxCharPerLine || 50) * 1.7)}点)...",
   "professionalSkills": [
-    { "title": "分类1", "items": ["技能1 (16-22点)", "技能2 (16-22点)", "技能3 (16-22点)", "技能4 (16-22点)"] },
-    { "title": "分类2", "items": ["技能1 (16-22点)", "技能2 (16-22点)", "技能3 (16-22点)", "技能4 (16-22点)"] },
-    { "title": "分类3", "items": ["技能1 (16-22点)", "技能2 (16-22点)", "技能3 (16-22点)", "技能4 (16-22点)"] },
-    { "title": "分类4", "items": ["技能1 (16-22点)", "技能2 (16-22点)", "技能3 (16-22点)", "技能4 (16-22点)"] }
+    { "title": "分类1", "items": ["技能1", "技能2", "技能3", "技能4" ] },
+    { "title": "分类2", "items": ["技能1", "技能2", "技能3", "技能4" ] },
+    { "title": "分类3", "items": ["技能1", "技能2", "技能3", "技能4" ] },
+    { "title": "分类4", "items": ["技能1", "技能2", "技能3", "技能4" ] }
   ],
   "workExperience": [
     {
