@@ -33,6 +33,7 @@ import searchMajors from './searchMajors';
 import batchSaveJobs from './batchSaveJobs';
 import login from './login';
 import upload from './upload';
+import ocr from './ocr';
 import retryGenerateResume from './retryGenerateResume';
 import restoreResume from './restoreResume';
 
@@ -75,5 +76,6 @@ router.use('/api', unsaveJob);
 router.use('/api', updateUserLanguage);
 router.use('/api', updateUserProfile);
 router.use('/api', upload);
+router.use('/api', ocr);
 
 export default router;

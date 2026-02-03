@@ -9,7 +9,7 @@ const router = Router();
  */
 router.post('/saveCustomJob', async (req: Request, res: Response) => {
   try {
-    const { title, content, experience } = req.body;
+    const { title, company, content, experience } = req.body;
     const openid = req.headers['x-openid'] as string;
 
     if (!openid) {
@@ -29,8 +29,8 @@ router.post('/saveCustomJob', async (req: Request, res: Response) => {
       title_chinese: title,
       description_chinese: content,
       experience: experience || '经验不限',
-      team: '手动录入',
-      source_name: '文字生成',
+      team: company || '未知公司',
+      source_name: '手动录入',
       createTime: new Date()
     };
 

@@ -33,52 +33,6 @@ export async function ensureUser(openid: string, userInfo: any = {}) {
 
   const inviteCode = generateInviteCode(openid);
 
-  // Migration: Unify fields
-  const existingUser = await usersCol.findOne({ openid });
-  if (existingUser && existingUser.membership) {
-    const m = existingUser.membership;
-    const renameObj: any = {};
-    const unsetObj: any = {};
-
-    // 1. Unify expire time to expire_at
-    if (m.expireTime !== undefined && m.expire_at === undefined) {
-      renameObj['membership.expire_at'] = m.expireTime;
-      unsetObj['membership.expireTime'] = '';
-    }
-
-    // 2. Unify all quota fields to pts_quota
-    // Priority: pts_quota > job_quota > resume_quota
-    if (m.pts_quota === undefined) {
-        if (m.job_quota !== undefined) {
-            renameObj['membership.pts_quota'] = m.job_quota;
-            unsetObj['membership.job_quota'] = '';
-        } else if (m.resume_quota !== undefined) {
-            renameObj['membership.pts_quota'] = m.resume_quota;
-            unsetObj['membership.resume_quota'] = '';
-        }
-    } else {
-        // If pts_quota already exists, just make sure old ones are gone
-        if (m.job_quota !== undefined) unsetObj['membership.job_quota'] = '';
-        if (m.resume_quota !== undefined) unsetObj['membership.resume_quota'] = '';
-    }
-    
-    // 3. Unify phone fields
-    if (!existingUser.phone && (existingUser.phoneNumber || existingUser.purePhoneNumber)) {
-        renameObj['phone'] = existingUser.purePhoneNumber || existingUser.phoneNumber;
-    }
-    if (existingUser.phoneNumber !== undefined) unsetObj['phoneNumber'] = '';
-    if (existingUser.purePhoneNumber !== undefined) unsetObj['purePhoneNumber'] = '';
-    if (existingUser.countryCode !== undefined) unsetObj['countryCode'] = '';
-    
-    if (Object.keys(renameObj).length > 0 || Object.keys(unsetObj).length > 0) {
-      const updateOp: any = {};
-      if (Object.keys(renameObj).length > 0) updateOp.$set = renameObj;
-      if (Object.keys(unsetObj).length > 0) updateOp.$unset = unsetObj;
-
-      await usersCol.updateOne({ openid }, updateOp);
-    }
-  }
-
   const updateData = {
     $setOnInsert: {
       openid,

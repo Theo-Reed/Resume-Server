@@ -26,7 +26,7 @@ export class GeminiService {
     try {
       const genAI = new GoogleGenerativeAI(this.apiKey);
       const model = genAI.getGenerativeModel(
-        { model: "gemini-2.0-flash" },
+        { model: "gemini-2.5-flash" },
         { baseUrl: this.baseUrl }
       );
 
@@ -123,6 +123,48 @@ export class GeminiService {
     }
 
     return "";
+  }
+
+  /**
+   * 多模态分析（图片 + 文字）
+   * @param prompt 提示词
+   * @param imageBuffer 图片 Buffer
+   * @param mimeType 图片类型
+   */
+  async analyzeImage(prompt: string, imageBuffer: Buffer, mimeType: string): Promise<string> {
+    // 优先调用 2.5 Flash，备选 2.5 Pro
+    const models = ["gemini-2.5-flash", "gemini-2.5-pro"];
+
+    for (const modelName of models) {
+      try {
+        console.log(`   - 尝试使用模型进行图文分析: ${modelName}`);
+        const genAI = new GoogleGenerativeAI(this.apiKey);
+        const model = genAI.getGenerativeModel(
+          { model: modelName },
+          { baseUrl: this.baseUrl }
+        );
+
+        const result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              data: imageBuffer.toString("base64"),
+              mimeType: mimeType
+            }
+          }
+        ]);
+
+        const response = await result.response;
+        const text = response.text();
+        
+        console.log(`   ✅ ${modelName} 图文分析成功`);
+        return text;
+      } catch (error: any) {
+        console.error(`      ❌ ${modelName} 图文分析失败:`, error.message);
+      }
+    }
+
+    throw new Error("所有待选的 Gemini 模型均调用异常，图文分析失败");
   }
 }
 
