@@ -130,18 +130,29 @@ export class ResumeGenerator {
   public detectExecutablePath(): string | undefined {
     if (process.platform !== 'linux') return undefined;
 
-    let chromePath = '/usr/bin/google-chrome';
-    if (!existsSync(chromePath)) {
-      try {
-        chromePath = execSync('which google-chrome').toString().trim();
-      } catch (e) {
-        chromePath = '';
-      }
+    // 常见路径列表
+    const paths = [
+      '/usr/bin/google-chrome',
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium',
+      '/snap/bin/chromium'
+    ];
+
+    for (const p of paths) {
+      if (existsSync(p)) return p;
     }
 
-    if (chromePath && existsSync(chromePath)) {
-      return chromePath;
+    try {
+      // 尝试使用 which 命令
+      const whichPath = execSync('which google-chrome || which google-chrome-stable || which chromium-browser || which chromium')
+        .toString()
+        .trim();
+      if (whichPath && existsSync(whichPath)) return whichPath;
+    } catch (e) {
+      // ignore
     }
+
     return undefined;
   }
 
@@ -160,9 +171,14 @@ export class ResumeGenerator {
         ],
       };
 
+      const isLinux = process.platform === 'linux';
       const chromePath = this.detectExecutablePath();
+      
       if (chromePath) {
         launchOptions.executablePath = chromePath;
+      } else if (isLinux) {
+        // 如果是 Linux 且没找到 Chrome，抛出更清晰的错误
+        throw new Error('❌ [Browser Init] CRITICAL: Google Chrome/Chromium not found. Please install it (e.g., sudo apt-get install google-chrome-stable).');
       }
 
       this.browser = await puppeteer.launch(launchOptions);
