@@ -218,7 +218,10 @@ app.get('/health', (req: Request, res: Response) => {
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
-  // 🚀 Step 0: 连接本地 MongoDB
+  // 🚀 Step 0: 环境检查
+  generator.checkEnvironment();
+
+  // 🚀 Step 1: 连接本地 MongoDB
   try {
     db = await connectToLocalMongo();
     console.log('✅ 使用本地 MongoDB 作为默认数据库');

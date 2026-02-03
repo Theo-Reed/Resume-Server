@@ -1,6 +1,7 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname, extname } from 'path';
+import { execSync } from 'child_process';
 import { ResumeData } from './types';
 
 /**
@@ -109,11 +110,46 @@ export class ResumeGenerator {
   }
 
   /**
+   * 检查运行环境 (启动时调用)
+   */
+  public checkEnvironment(): void {
+    if (process.platform === 'linux') {
+      const path = this.detectExecutablePath();
+      if (!path) {
+        console.error('❌ [Environment Check] Error: Google Chrome not found at /usr/bin/google-chrome and "which google-chrome" failed.');
+        console.error('                           Please install google-chrome-stable to use the resume generation service.');
+      } else {
+        console.log(`✅ [Environment Check] Found Google Chrome at: ${path}`);
+      }
+    }
+  }
+
+  /**
+   * 自动探测 Chrome 路径 (仅限 Linux)
+   */
+  public detectExecutablePath(): string | undefined {
+    if (process.platform !== 'linux') return undefined;
+
+    let chromePath = '/usr/bin/google-chrome';
+    if (!existsSync(chromePath)) {
+      try {
+        chromePath = execSync('which google-chrome').toString().trim();
+      } catch (e) {
+        chromePath = '';
+      }
+    }
+
+    if (chromePath && existsSync(chromePath)) {
+      return chromePath;
+    }
+    return undefined;
+  }
+
+  /**
    * 初始化浏览器实例
    */
   async init(): Promise<void> {
     if (!this.browser) {
-      const isLinux = process.platform === 'linux';
       const launchOptions: any = {
         headless: true,
         args: [
@@ -124,9 +160,9 @@ export class ResumeGenerator {
         ],
       };
 
-      if (isLinux) {
-        // 针对 Ubuntu 服务器环境，显式指定 Chrome 路径
-        launchOptions.executablePath = '/usr/bin/google-chrome';
+      const chromePath = this.detectExecutablePath();
+      if (chromePath) {
+        launchOptions.executablePath = chromePath;
       }
 
       this.browser = await puppeteer.launch(launchOptions);
