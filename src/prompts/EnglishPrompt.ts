@@ -124,7 +124,7 @@ Experience ${i + 1}:
 - Company: ${exp.company} (DO NOT CHANGE)
 - Original Title: ${exp.jobTitle}
 - Business Direction: ${exp.businessDirection}
-- Work Content: ${exp.workContent || "None"} (Low weight reference: Use only if highly relevant to ${targetTarget}; otherwise IGNORE and regenerate based on target)
+- Work Content: ${exp.workContent || "None"} (Low weight reference: Use only if highly relevant to ${targetTitle}; otherwise IGNORE and regenerate based on target)
 - Time: ${exp.startDate} to ${exp.endDate} (DO NOT CHANGE)
 `).join('\n')}
 

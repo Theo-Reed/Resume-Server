@@ -113,15 +113,23 @@ export class ResumeGenerator {
    */
   async init(): Promise<void> {
     if (!this.browser) {
-      this.browser = await puppeteer.launch({
+      const isLinux = process.platform === 'linux';
+      const launchOptions: any = {
         headless: true,
         args: [
-          '--no-sandbox', 
+          '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage', // 关键：解决 Docker 内存共享不足问题
           '--disable-gpu' // 节省资源，headless 不需要 GPU
         ],
-      });
+      };
+
+      if (isLinux) {
+        // 针对 Ubuntu 服务器环境，显式指定 Chrome 路径
+        launchOptions.executablePath = '/usr/bin/google-chrome';
+      }
+
+      this.browser = await puppeteer.launch(launchOptions);
     }
   }
 
