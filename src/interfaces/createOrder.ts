@@ -3,7 +3,7 @@ import { getDb } from '../db';
 import { ensureUser } from '../userUtils';
 import { ObjectId } from 'mongodb';
 
-import { hasWxConfig, getMiniProgramPaymentParams } from '../utils/wechatPay';
+import { hasWxConfig, getMiniProgramPaymentParams } from '../wechat-pay';
 
 const router = Router();
 

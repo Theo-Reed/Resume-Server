@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { verifyNotification, decipherNotification } from '../utils/wechatPay'; // Re-import
+import { verifyNotification, decipherNotification } from './index'; // 已移至同级目录的 index.ts
 
 import { activateMembershipByOrder } from '../services/membershipService';
 import { getDb } from '../db';

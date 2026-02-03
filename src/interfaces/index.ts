@@ -17,7 +17,7 @@ import getPublicJobList from './getPublicJobList';
 import getSavedJobs from './getSavedJobs';
 import getSavedSearchConditions from './getSavedSearchConditions';
 import initUser from './initUser';
-import payCallback from './payCallback';
+import payCallback from '../wechat-pay/callback';
 import saveJob from './saveJob';
 import saveSearchCondition from './saveSearchCondition';
 import saveCustomJob from './saveCustomJob';
