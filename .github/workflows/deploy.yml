@@ -3,7 +3,7 @@ name: Auto Deploy
 on:
   push:
     branches:
-      - master  # 当你向 main 分支推送代码时触发
+      - master  # 检查你的分支名是 master 还是 main，建议对齐
 
 jobs:
   deploy:
@@ -19,8 +19,18 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           password: ${{ secrets.REMOTE_PASSWORD }}
           script: |
-            cd /root/projects/PuppetResume  # 进入你的项目目录
-            git pull origin main             # 拉取最新代码
-            export PUPPETEER_SKIP_DOWNLOAD=true # 记得跳过那个讨厌的浏览器下载
-            npm install                      # 安装新增加的依赖
-            pm2 reload puppet-backend        # 无缝重启项目
+            # 1. 进入新命名的项目目录
+            cd /root/projects/PuppetResume 
+            
+            # 2. 拉取最新代码
+            git pull origin main
+            
+            # 3. 环境变量设置
+            export PUPPETEER_SKIP_DOWNLOAD=true
+            
+            # 4. 安装依赖并编译（如果是 TypeScript 项目，build 很重要）
+            npm install
+            npm run build
+            
+            # 5. 使用新名字重启，并强制更新环境变量 (.env)
+            pm2 restart Resume-Server --update-env
