@@ -20,19 +20,36 @@ jobs:
           password: ${{ secrets.REMOTE_PASSWORD }}
           script: |
             # 1. 进入项目目录
-            cd /root/projects/puppet-resume || { echo "Directory not found"; exit 1; }
+            cd /root/projects/puppet-resume || { echo "❌ Directory not found"; exit 1; }
             
-            # 2. 强制重置代码，解决任何潜在冲突
+            # 2. 强制同步代码
+            echo "--- Git Syncing ---"
             git fetch --all
-            git clean -fd          # 清理未追踪文件
+            git clean -fd
             git reset --hard origin/master
             
-            # 3. 环境变量设置
-            export PUPPETEER_SKIP_DOWNLOAD=true
+            # 3. 验证 HEAD 状态
+            echo "--- Deployment Verification ---"
+            LOCAL_HEAD=$(git rev-parse HEAD)
+            REMOTE_HEAD=$(git rev-parse origin/master)
+            echo "Local  HEAD: $LOCAL_HEAD"
+            echo "Remote HEAD: $REMOTE_HEAD"
             
-            # 4. 安装依赖并编译
+            if [ "$LOCAL_HEAD" = "$REMOTE_HEAD" ]; then
+              echo "✅ SUCCESS: Server is now at the latest commit."
+            else
+              echo "❌ ERROR: Server HEAD mismatch!"
+              exit 1
+            fi
+            
+            echo "Latest Commit Info:"
+            git log -1 --format="%h - %an: %s (%cr)"
+            
+            # 4. 环境准备与部署
+            export PUPPETEER_SKIP_DOWNLOAD=true
             npm ci || npm install
             npm run build
             
-            # 5. 重启服务 (兼容初次启动或进程不存在的情况)
+            # 5. 重启服务
             pm2 restart Resume-Server --update-env || pm2 start dist/server.js --name Resume-Server
+            echo "--- Deployment Finished ---"
