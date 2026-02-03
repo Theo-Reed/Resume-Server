@@ -44,11 +44,9 @@ router.post('/deleteGeneratedResume', async (req: Request, res: Response) => {
     // 2. Delete the file from filesystem if it exists
     if (resume.fileUrl) {
         // fileUrl is like "/public/resumes/xxx.pdf"
-        // We need to map it to local system path.
-        // Assuming process.cwd() is the root of the project.
-        // If fileUrl starts with /, we can join it.
-        const relativePath = resume.fileUrl.startsWith('/') ? resume.fileUrl.substring(1) : resume.fileUrl;
-        const fullPath = path.join(process.cwd(), relativePath);
+        // Ensure path stays within public/resumes to prevent path traversal
+        const fileName = path.basename(resume.fileUrl);
+        const fullPath = path.join(process.cwd(), 'public', 'resumes', fileName);
         
         console.log(`[Delete] Attempting to delete file: ${fullPath}`);
         
