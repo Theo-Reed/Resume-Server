@@ -3,6 +3,7 @@ import axios from 'axios';
 import { getAccessToken } from '../../utils/wechatUtils';
 import { getDb } from '../../db';
 import { generateToken } from '../auth/utils';
+import { generateInviteCode } from '../../userUtils';
 
 const router = Router();
 
@@ -56,89 +57,69 @@ router.post('/getPhoneNumber', async (req: Request, res: Response) => {
     // A. 查找是否存已有用户使用了该手机号
     const existingUser = await usersCol.findOne({ phone: purePhone });
 
-    if (existingUser && existingUser.openid !== userOpenId) {
-        console.log(`[Merge] 检测到手机号 ${purePhone} 已关联用户 ${existingUser.openid}，开始合并数据...`);
+    if (existingUser) {
+        console.log(`[Auth] 手机号 ${purePhone} 已存在主账号，直接关联并登录`);
         
-        // 1. 迁移所有业务数据
-        const collectionsToMigrate = [
-            'generated_resumes',
-            'orders',
-            'saved_jobs',
-            'saved_search_conditions',
-            'custom_jobs'
-        ];
-
-        for (const collName of collectionsToMigrate) {
-            try {
-                const migrateRes = await db.collection(collName).updateMany(
-                    { openid: userOpenId },
-                    { $set: { openid: existingUser.openid } }
-                );
-                if (migrateRes.matchedCount > 0) {
-                    console.log(`   - 迁移 ${collName}: 已将 ${migrateRes.matchedCount} 条数据移动至主账号`);
-                }
-            } catch (err) {
-                console.error(`   - 迁移 ${collName} 失败:`, err);
-            }
-        }
-
-        // 2. 合并资产（目前主要合并 topup 额度）
-        const currentUser = await usersCol.findOne({ openid: userOpenId });
-        if (currentUser && currentUser.membership && currentUser.membership.topup_quota > 0) {
-            await usersCol.updateOne(
-                { openid: existingUser.openid },
-                { 
-                    $inc: { 
-                        'membership.topup_quota': currentUser.membership.topup_quota,
-                        'membership.topup_limit': currentUser.membership.topup_quota || 0
-                    } 
-                }
-            );
-            console.log(`   - 资产合并: 已将 ${currentUser.membership.topup_quota} 额度转入主账号`);
-        }
-
-        // 3. 更新当前账号为关联状态
-        await usersCol.updateOne(
-          { openid: userOpenId },
+        // 扫地逻辑：确保该 OpenID 之前没有绑定在其他手机号下
+        await usersCol.updateMany(
           { 
-            $set: { 
-              phone: purePhone,
-              is_merged: true,
-              primary_openid: existingUser.openid,
-              updatedAt: new Date()
-            },
-            $unset: {
-              phone_info: "" // 减少主备不一致风险，主账号存 phone_info 即可
-            }
-          }
-        );
-
-    } else {
-        // B. 正常绑定（新手机号或已在该 OpenID 下）
-        await db.collection('users').updateOne(
-          { openid: userOpenId },
-          { 
-            $set: { 
-              phone: purePhone,
-              phone_info: phoneInfo,
-              is_merged: false,
-              primary_openid: null,
-              updatedAt: new Date()
-            },
-            $unset: {
-              phoneNumber: "",
-              purePhoneNumber: "",
-              countryCode: ""
-            }
+              _id: { $ne: existingUser._id }, 
+              $or: [{ openid: userOpenId }, { openids: userOpenId }] 
           },
-          { upsert: true }
+          { $pull: { openids: userOpenId } as any }
         );
+
+        // 将当前 OpenID 关联到老账号 (使用 $addToSet 避免重复)
+        await usersCol.updateOne(
+            { _id: existingUser._id },
+            { 
+                $addToSet: { openids: userOpenId },
+                $set: { updatedAt: new Date(), lastLoginTime: new Date() } 
+            }
+        );
+    } else {
+        // B. 新手机号，创建新用户
+        console.log(`[Auth] 手机号 ${purePhone} 为新用户，创建账号并绑定 OpenID: ${userOpenId}`);
+        
+        // 扫地逻辑：确保该 OpenID 不再指向旧账号
+        await usersCol.updateMany(
+          { $or: [{ openid: userOpenId }, { openids: userOpenId }] },
+          { $pull: { openids: userOpenId } as any, $unset: { openid: "" } }
+        );
+
+        // 计算 3 天后的会员过期时间
+        const expireAt = new Date();
+        expireAt.setDate(expireAt.getDate() + 3);
+
+        const inviteCode = generateInviteCode(userOpenId);
+
+        const newUser = {
+            openid: userOpenId,
+            openids: [userOpenId], // 初始化 OpenID 列表
+            phone: purePhone,
+            phone_info: phoneInfo,
+            language: 'AIChinese',
+            isAuthed: true, // 授权过手机号即视为已认证
+            membership: { 
+                level: 1, 
+                expire_at: expireAt,
+                pts_quota: { limit: 5, used: 0 }
+            },
+            inviteCode, // 个人邀请码
+            hasUsedInviteCode: false, // 是否使用过别人的邀请码
+            resume_profile: {},
+            nickname: '丈月尺用户',
+            avatar: '',
+            createTime: new Date(),
+            lastLoginTime: new Date(),
+            updatedAt: new Date()
+        };
+
+        await usersCol.insertOne(newUser);
     }
 
-    // 4. 获取最终用户信息并生成 Token
-    const finalUser = await usersCol.findOne({ 
-      $or: [{ openid: userOpenId }, { openids: userOpenId }] 
-    });
+    // 4. 获取最终用户信息并生成 Token (强制使用 phone 查找以确保拿到最新记录)
+    const finalUser = await usersCol.findOne({ phone: purePhone });
 
     if (!finalUser) {
       throw new Error('Failed to retrieve user after update');
@@ -161,6 +142,7 @@ router.post('/getPhoneNumber', async (req: Request, res: Response) => {
         user: {
           _id: finalUser._id,
           phone: finalUser.phone,
+          phoneNumber: finalUser.phone, // 兼容前端对 phoneNumber 的引用
           profile: finalUser.profile,
           membership: finalUser.membership
         }

@@ -15,17 +15,14 @@ router.post('/initUser', async (req: Request, res: Response) => {
     
     const user = await ensureUser(openid, userInfo);
 
-    if (!user) {
-      return res.status(500).json({ success: false, message: 'User initialization failed' });
-    }
-
     const testUser = await isTestUser(openid);
     
     res.json({
       success: true, 
       result: {
-        openid: (user as any).openid,
-        user,
+        openid,
+        user: user || null,
+        isNewUser: !user,
         isTestUser: testUser
       }
     });

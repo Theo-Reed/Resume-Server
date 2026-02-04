@@ -5,7 +5,7 @@ import { createHash } from 'crypto';
  * Generate a unique and deterministic invite code based on openid
  * Using Base62 (0-9, A-Z, a-z) for better entropy and professional look
  */
-function generateInviteCode(openid: string): string {
+export function generateInviteCode(openid: string): string {
   const hashBuffer = createHash('md5').update(openid).digest();
   const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   let code = '';
@@ -27,60 +27,26 @@ export async function ensureUser(openid: string, userInfo: any = {}) {
   const db = getDb();
   const usersCol = db.collection('users');
 
-  // A. 首先检查是否存在主账号跳转 (影子账号逻辑)
-  const existingUser = await usersCol.findOne({ openid });
-  if (existingUser && existingUser.primary_openid) {
-      const primaryUser = await usersCol.findOne({ openid: existingUser.primary_openid });
-      if (primaryUser) {
-          // console.log(`[User] 重定向影子账号 ${openid} -> 主账号 ${existingUser.primary_openid}`);
-          return primaryUser;
-      }
+  // 1. 查找是否存在该用户 (通过 openid 或 openids 数组)
+  const user = await usersCol.findOne({
+    $or: [
+      { openid },
+      { openids: openid }
+    ]
+  });
+
+  if (user) {
+    // 如果找到了，更新最后登录时间
+    await usersCol.updateOne(
+      { _id: user._id },
+      { $set: { lastLoginTime: new Date() } }
+    );
+    return user;
   }
 
-  // B. 原有的初始化逻辑
-  // Calculate 3 days from now
-  const expireAt = new Date();
-  expireAt.setDate(expireAt.getDate() + 3);
-
-  const inviteCode = generateInviteCode(openid);
-
-  const updateData = {
-    $setOnInsert: {
-      openid,
-      language: 'AIChinese',
-      isAuthed: false,
-      membership: { 
-        level: 1, // Start as trial member
-        expire_at: expireAt,
-        pts_quota: {
-            limit: 5,
-            used: 0
-        }
-      },
-      inviteCode, // Personal invite code
-      hasUsedInviteCode: false, // Record if this user has used someone else's code
-      resume_profile: {},
-      nickname: '丈月尺用户',
-      avatar: '',
-      createTime: new Date(),
-      ...userInfo
-    },
-    $set: {
-      lastLoginTime: new Date()
-    }
-  };
-
-  const result = await usersCol.findOneAndUpdate(
-    { openid },
-    updateData as any,
-    { upsert: true, returnDocument: 'after' }
-  );
-
-  if (result && (result as any).avatar === undefined) {
-    (result as any).avatar = '';
-  }
-
-  return result;
+  // 2. 如果没找到，不再自动 upsert (避免创建空壳账号)
+  // 用户只有在授权手机号后才会被正式创建
+  return null;
 }
 
 /**
