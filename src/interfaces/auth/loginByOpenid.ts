@@ -1,15 +1,20 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../../db';
 import { generateToken } from './utils';
+import { StatusCode } from '../../constants/statusCodes';
 
 const router = Router();
 
-router.post('/auth/loginByOpenid', async (req: Request, res: Response) => {
+router.post('/loginByOpenid', async (req: Request, res: Response) => {
   try {
     const { openid } = req.body;
 
     if (!openid) {
-      return res.status(400).json({ success: false, message: 'OpenID is required' });
+      return res.status(400).json({ 
+        success: false, 
+        code: StatusCode.INVALID_PARAMS,
+        message: 'OpenID is required' 
+      });
     }
 
     const db = getDb();
@@ -25,7 +30,11 @@ router.post('/auth/loginByOpenid', async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res.status(404).json({ 
+        success: false, 
+        code: StatusCode.USER_NOT_FOUND,
+        message: 'User not found' 
+      });
     }
 
     // Generate Token
@@ -36,6 +45,7 @@ router.post('/auth/loginByOpenid', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
+      code: StatusCode.SUCCESS,
       data: {
         token,
         user: {
@@ -49,7 +59,11 @@ router.post('/auth/loginByOpenid', async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error('[Auth] LoginByOpenid error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ 
+      success: false, 
+      code: StatusCode.INTERNAL_ERROR,
+      message: 'Internal server error' 
+    });
   }
 });
 

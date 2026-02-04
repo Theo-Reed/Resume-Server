@@ -1,16 +1,20 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../../db';
 import { hashPassword, generateToken } from './utils';
-import { ensureUser } from '../../userUtils'; // We might need to refactor this eventually
+import { StatusCode } from '../../constants/statusCodes';
 
 const router = Router();
 
-router.post('/auth/register', async (req: Request, res: Response) => {
+router.post('/register', async (req: Request, res: Response) => {
   try {
     const { phoneNumber, password, openid } = req.body;
 
     if (!phoneNumber || !password) {
-      return res.status(400).json({ success: false, message: 'Phone number and password are required' });
+      return res.status(400).json({ 
+        success: false, 
+        code: StatusCode.INVALID_PARAMS,
+        message: 'Phone number and password are required' 
+      });
     }
 
     const db = getDb();
@@ -19,7 +23,11 @@ router.post('/auth/register', async (req: Request, res: Response) => {
     // 1. Check if phone is already registered
     const existingUser = await usersCol.findOne({ phoneNumber });
     if (existingUser) {
-      return res.status(409).json({ success: false, message: 'Phone number already registered' });
+      return res.status(409).json({ 
+        success: false, 
+        code: StatusCode.USER_EXISTS,
+        message: 'Phone number already registered' 
+      });
     }
 
     // 2. Hash password
@@ -58,13 +66,14 @@ router.post('/auth/register', async (req: Request, res: Response) => {
       memberSchemes: []
     };
 
-    const result = await usersCol.insertOne(newUser);
+    const result = await usersCol.insertOne(newUser as any);
     
     // 4. Generate Token
     const token = generateToken({ userId: result.insertedId.toString(), phoneNumber });
 
     res.json({
       success: true,
+      code: StatusCode.SUCCESS,
       data: {
         token,
         user: {
@@ -77,7 +86,11 @@ router.post('/auth/register', async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error('[Auth] Register error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ 
+      success: false, 
+      code: StatusCode.INTERNAL_ERROR,
+      message: 'Internal server error' 
+    });
   }
 });
 

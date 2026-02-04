@@ -1,10 +1,9 @@
 import { Router } from 'express';
+import { StatusCode } from '../constants/statusCodes';
 import { getEffectiveOpenid } from '../userUtils';
 
 // Modules
-import loginByOpenidRouter from './auth/loginByOpenid';
-import loginRouter from './auth/login';
-import registerRouter from './auth/register';
+import auth from './auth';
 import resume from './resume';
 import user from './user';
 import search from './search';
@@ -26,20 +25,20 @@ router.get('/api/ping', (req, res) => res.send('pong'));
 const apiRouter = Router();
 
 // 1. 无需鉴权的公共模块挂载
-apiRouter.use(loginByOpenidRouter);
-apiRouter.use(loginRouter);
-apiRouter.use(registerRouter);
+apiRouter.use(auth);
 
 // 2. JWT 验证与身份映射中间件
 apiRouter.use(async (req, res, next) => {
   const skipList = [
     '/initUser', 
-    '/login', 
+    '/login',
+    '/loginByPhone', 
     '/getPhoneNumber', 
-    '/auth', 
-    '/system-config',
-    '/getPublicJobList',      // 允许未登录查看岗位列表
-    '/getFeaturedJobList'     // 允许未登录查看精选岗位列表（但点击查看详情可能需要登录）
+    '/loginByOpenid', 
+    '/register',
+    '/system',
+    '/getPublicJobList',
+    '/getFeaturedJobList'
   ];
   if (skipList.some(path => req.path.includes(path))) {
     return next();
@@ -50,7 +49,11 @@ apiRouter.use(async (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+    return res.status(401).json({ 
+      success: false, 
+      code: StatusCode.UNAUTHORIZED,
+      message: 'Access denied. No token provided.' 
+    });
   }
 
   try {
@@ -67,7 +70,11 @@ apiRouter.use(async (req, res, next) => {
     next();
   } catch (error) {
     console.error('[JWT Middleware] Invalid token');
-    return res.status(403).json({ success: false, message: 'Invalid or expired token' });
+    return res.status(403).json({ 
+      success: false, 
+      code: StatusCode.INVALID_TOKEN,
+      message: 'Invalid or expired token' 
+    });
   }
 });
 

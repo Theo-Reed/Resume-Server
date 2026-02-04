@@ -1,15 +1,20 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../../db';
 import { comparePassword, generateToken } from './utils';
+import { StatusCode } from '../../constants/statusCodes';
 
 const router = Router();
 
-router.post('/auth/login', async (req: Request, res: Response) => {
+router.post('/loginByPhone', async (req: Request, res: Response) => {
   try {
     const { phoneNumber, password, openid } = req.body;
 
     if (!phoneNumber || !password) {
-      return res.status(400).json({ success: false, message: 'Phone number and password are required' });
+      return res.status(400).json({ 
+        success: false, 
+        code: StatusCode.INVALID_PARAMS,
+        message: 'Phone number and password are required' 
+      });
     }
 
     const db = getDb();
@@ -18,18 +23,30 @@ router.post('/auth/login', async (req: Request, res: Response) => {
     // 1. Find user by phone
     const user = await usersCol.findOne({ phoneNumber });
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid phone or password' });
+      return res.status(401).json({ 
+        success: false, 
+        code: StatusCode.UNAUTHORIZED,
+        message: 'Invalid phone or password' 
+      });
     }
 
     // 2. Verify password
     // If user has no password (migrated user?), we might need a flow to set it, but for now assume new flow
     if (!user.password) {
-       return res.status(401).json({ success: false, message: 'Password not set. Please reset password.' });
+       return res.status(401).json({ 
+         success: false, 
+         code: StatusCode.UNAUTHORIZED,
+         message: 'Password not set. Please reset password.' 
+       });
     }
 
     const isMatch = await comparePassword(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid phone or password' });
+      return res.status(401).json({ 
+        success: false, 
+        code: StatusCode.UNAUTHORIZED,
+        message: 'Invalid phone or password' 
+      });
     }
 
     // 3. Handle OpenID Binding (Stealing Logic)
@@ -63,6 +80,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
+      code: StatusCode.SUCCESS,
       data: {
         token,
         user: {
@@ -76,7 +94,11 @@ router.post('/auth/login', async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error('[Auth] Login error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    res.status(500).json({ 
+      success: false, 
+      code: StatusCode.INTERNAL_ERROR,
+      message: 'Internal server error' 
+    });
   }
 });
 
