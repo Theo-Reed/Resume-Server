@@ -55,12 +55,8 @@ router.post('/login', async (req: Request, res: Response) => {
       }
     });
 
-  } catch (error) {
-        openid,
-        user
-      }
-    });
   } catch (error: any) {
+    console.error('[User Login] Error exchanging code for openid:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
