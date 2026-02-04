@@ -20,12 +20,11 @@ router.use((req, res, next) => {
 
 // Root level health check
 router.get('/api/ping', (req, res) => res.send('pong'));
-router.post('/api/auth/test', (req, res) => res.json({ msg: 'auth test ok' }));
+
+// --- 关键修正：将 Auth 模块直接挂载在主路由，避免 apiRouter 嵌套导致的 404 ---
+router.use('/api/auth', auth);
 
 const apiRouter = Router();
-
-// Mount Auth routes first (no middleware interference)
-apiRouter.use('/auth', auth);
 
 // 1. JWT 验证与身份映射中间件
 apiRouter.use(async (req, res, next) => {
