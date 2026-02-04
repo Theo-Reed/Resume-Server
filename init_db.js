@@ -98,9 +98,15 @@ async function main() {
       }
     ]);
     
-    // Also clear users to test new initUser
+    // Also clear users to test new auth system
     await db.collection('users').deleteMany({});
-    await db.collection('users').createIndex({ openid: 1 }, { unique: true });
+    
+    // User Indexes for Login Wall
+    console.log('Creating user indexes...');
+    await db.collection('users').createIndex({ phone: 1 }, { unique: true, sparse: true });
+    await db.collection('users').createIndex({ openids: 1 }, { unique: true, sparse: true });
+    // Keep single openid field index for legacy logic support if needed, but not necessarily unique if transitioning
+    await db.collection('users').createIndex({ openid: 1 }); 
     
     await db.collection('generated_resumes').deleteMany({});
     await db.collection('orders').deleteMany({});
