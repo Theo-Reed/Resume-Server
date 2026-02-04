@@ -139,6 +139,7 @@ router.post('/getPhoneNumber', async (req: Request, res: Response) => {
       },
       data: {
         token,
+        isNewUser: !existingUser,
         user: {
           _id: finalUser._id,
           phone: finalUser.phone,
