@@ -6,16 +6,35 @@ const router = Router();
 // Used in: components/job-tab/index.ts
 router.post('/getPublicJobList', async (req: Request, res: Response) => {
   try {
-    const { pageSize = 10, skip = 0, source_name, salary, experience, language } = req.body;
+    const { pageSize = 10, skip = 0, source_name, salary, experience, type, language } = req.body;
     const db = getDb();
     
     // 构建查询条件
-    const query: any = { type: '国内' };
-    if (source_name) query.source_name = source_name;
-    // 增加其他过滤条件逻辑...
+    const query: any = { is_deleted: { $ne: true } };
+    
+    // 地区筛选 - 公开列表默认显示国内
+    if (type && type !== '全部') {
+      query.type = type;
+    } else {
+      query.type = '国内';
+    }
+
+    // 来源筛选
+    if (source_name && Array.isArray(source_name) && source_name.length > 0) {
+      query.source_name = { $in: source_name };
+    }
+
+    // 薪资和经验筛选
+    if (salary && salary !== '全部') {
+      query.salary = { $regex: salary, $options: 'i' };
+    }
+    if (experience && experience !== '全部') {
+      query.experience = { $regex: experience, $options: 'i' };
+    }
 
     const jobs = await db.collection('remote_jobs')
       .find(query)
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(pageSize)
       .toArray();

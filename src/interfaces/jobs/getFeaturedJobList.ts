@@ -6,17 +6,40 @@ const router = Router();
 // Used in: components/job-tab/index.ts
 router.post('/getFeaturedJobList', async (req: Request, res: Response) => {
   try {
-    const { pageSize = 10, skip = 0, source_name, salary, experience, language } = req.body;
+    const { pageSize = 10, skip = 0, source_name, salary, experience, type, language } = req.body;
     const db = getDb();
 
-    // Logic:
-    // Query 'remote_jobs' table
-    // Apply filters: type IN ('国外', 'web3') or similar logic for featured
-    const query: any = { type: { $in: ['国外', 'web3'] } };
-    if (source_name) query.source_name = source_name;
+    // 构建查询条件
+    const query: any = { is_deleted: { $ne: true } };
+    
+    // 地区/类型筛选
+    if (type && type !== '全部') {
+      if (Array.isArray(type)) {
+        query.type = { $in: type };
+      } else {
+        query.type = type;
+      }
+    } else {
+      // 默认精选岗位包含国外和web3
+      query.type = { $in: ['国外', 'web3'] };
+    }
+
+    // 来源筛选
+    if (source_name && Array.isArray(source_name) && source_name.length > 0) {
+      query.source_name = { $in: source_name };
+    }
+
+    // 薪资和经验筛选 (暂时支持精确匹配或包含关系，后续可优化为范围查询)
+    if (salary && salary !== '全部') {
+      query.salary = { $regex: salary, $options: 'i' };
+    }
+    if (experience && experience !== '全部') {
+      query.experience = { $regex: experience, $options: 'i' };
+    }
 
     const jobs = await db.collection('remote_jobs')
       .find(query)
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(pageSize)
       .toArray();
