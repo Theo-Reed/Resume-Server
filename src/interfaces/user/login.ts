@@ -43,11 +43,19 @@ router.post('/login', async (req: Request, res: Response) => {
 
     openid = response.data.openid;
 
-    const user = await ensureUser(openid);
+    // Changes for Login Wall: Do NOT ensure/create user here.
+    // just return the openid so the frontend can check auth status or show login.
+    // const user = await ensureUser(openid);
 
     res.json({
       success: true,
-      result: {
+      result: { 
+        openid
+        // user: user // No user object until authenticated via auth/login
+      }
+    });
+
+  } catch (error) {
         openid,
         user
       }

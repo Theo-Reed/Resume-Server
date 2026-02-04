@@ -49,22 +49,90 @@ router.post('/getPhoneNumber', async (req: Request, res: Response) => {
         throw new Error('Database not initialized');
     }
 
-    await db.collection('users').updateOne(
-      { openid: userOpenId },
-      { 
-        $set: { 
-          phone: phoneInfo.purePhoneNumber, // 统一存放纯数字号码
-          phone_info: phoneInfo,           // 保留原始信息备份
-          updatedAt: new Date()
-        },
-        $unset: {
-          phoneNumber: "",
-          purePhoneNumber: "",
-          countryCode: ""
+    const usersCol = db.collection('users');
+    const purePhone = phoneInfo.purePhoneNumber;
+
+    // A. 查找是否存已有用户使用了该手机号
+    const existingUser = await usersCol.findOne({ phone: purePhone });
+
+    if (existingUser && existingUser.openid !== userOpenId) {
+        console.log(`[Merge] 检测到手机号 ${purePhone} 已关联用户 ${existingUser.openid}，开始合并数据...`);
+        
+        // 1. 迁移所有业务数据
+        const collectionsToMigrate = [
+            'generated_resumes',
+            'orders',
+            'saved_jobs',
+            'saved_search_conditions',
+            'custom_jobs'
+        ];
+
+        for (const collName of collectionsToMigrate) {
+            try {
+                const migrateRes = await db.collection(collName).updateMany(
+                    { openid: userOpenId },
+                    { $set: { openid: existingUser.openid } }
+                );
+                if (migrateRes.matchedCount > 0) {
+                    console.log(`   - 迁移 ${collName}: 已将 ${migrateRes.matchedCount} 条数据移动至主账号`);
+                }
+            } catch (err) {
+                console.error(`   - 迁移 ${collName} 失败:`, err);
+            }
         }
-      },
-      { upsert: true }
-    );
+
+        // 2. 合并资产（目前主要合并 topup 额度）
+        const currentUser = await usersCol.findOne({ openid: userOpenId });
+        if (currentUser && currentUser.membership && currentUser.membership.topup_quota > 0) {
+            await usersCol.updateOne(
+                { openid: existingUser.openid },
+                { 
+                    $inc: { 
+                        'membership.topup_quota': currentUser.membership.topup_quota,
+                        'membership.topup_limit': currentUser.membership.topup_quota || 0
+                    } 
+                }
+            );
+            console.log(`   - 资产合并: 已将 ${currentUser.membership.topup_quota} 额度转入主账号`);
+        }
+
+        // 3. 更新当前账号为关联状态
+        await usersCol.updateOne(
+          { openid: userOpenId },
+          { 
+            $set: { 
+              phone: purePhone,
+              is_merged: true,
+              primary_openid: existingUser.openid,
+              updatedAt: new Date()
+            },
+            $unset: {
+              phone_info: "" // 减少主备不一致风险，主账号存 phone_info 即可
+            }
+          }
+        );
+
+    } else {
+        // B. 正常绑定（新手机号或已在该 OpenID 下）
+        await db.collection('users').updateOne(
+          { openid: userOpenId },
+          { 
+            $set: { 
+              phone: purePhone,
+              phone_info: phoneInfo,
+              is_merged: false,
+              primary_openid: null,
+              updatedAt: new Date()
+            },
+            $unset: {
+              phoneNumber: "",
+              purePhoneNumber: "",
+              countryCode: ""
+            }
+          },
+          { upsert: true }
+        );
+    }
 
     // 4. 返回结果
     res.json({

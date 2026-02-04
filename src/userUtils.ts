@@ -27,6 +27,17 @@ export async function ensureUser(openid: string, userInfo: any = {}) {
   const db = getDb();
   const usersCol = db.collection('users');
 
+  // A. 首先检查是否存在主账号跳转 (影子账号逻辑)
+  const existingUser = await usersCol.findOne({ openid });
+  if (existingUser && existingUser.primary_openid) {
+      const primaryUser = await usersCol.findOne({ openid: existingUser.primary_openid });
+      if (primaryUser) {
+          // console.log(`[User] 重定向影子账号 ${openid} -> 主账号 ${existingUser.primary_openid}`);
+          return primaryUser;
+      }
+  }
+
+  // B. 原有的初始化逻辑
   // Calculate 3 days from now
   const expireAt = new Date();
   expireAt.setDate(expireAt.getDate() + 3);
@@ -70,6 +81,16 @@ export async function ensureUser(openid: string, userInfo: any = {}) {
   }
 
   return result;
+}
+
+/**
+ * 获取物理上生效的 OpenID（处理账号合并重定向）
+ */
+export async function getEffectiveOpenid(openid: string): Promise<string> {
+  if (!openid) return openid;
+  const db = getDb();
+  const user = await db.collection('users').findOne({ openid }, { projection: { primary_openid: 1 } });
+  return (user as any)?.primary_openid || openid;
 }
 
 /**
