@@ -6,17 +6,17 @@ const router = Router();
 
 router.post('/login', async (req: Request, res: Response) => {
   try {
-    const { phone, password, openid } = req.body;
+    const { phoneNumber, password, openid } = req.body;
 
-    if (!phone || !password) {
-      return res.status(400).json({ success: false, message: 'Phone and password are required' });
+    if (!phoneNumber || !password) {
+      return res.status(400).json({ success: false, message: 'Phone number and password are required' });
     }
 
     const db = getDb();
     const usersCol = db.collection('users');
 
     // 1. Find user by phone
-    const user = await usersCol.findOne({ phone });
+    const user = await usersCol.findOne({ phoneNumber });
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid phone or password' });
     }
@@ -59,7 +59,7 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     // 4. Generate Token
-    const token = generateToken({ userId: user._id.toString(), phone: user.phone });
+    const token = generateToken({ userId: user._id.toString(), phoneNumber: user.phoneNumber });
 
     res.json({
       success: true,
@@ -67,7 +67,7 @@ router.post('/login', async (req: Request, res: Response) => {
         token,
         user: {
           _id: user._id,
-          phone: user.phone,
+          phoneNumber: user.phoneNumber,
           openids: updatedOpenids,
           profile: user.profile
         }

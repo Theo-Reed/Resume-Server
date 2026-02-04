@@ -7,17 +7,17 @@ const router = Router();
 
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { phone, password, openid } = req.body;
+    const { phoneNumber, password, openid } = req.body;
 
-    if (!phone || !password) {
-      return res.status(400).json({ success: false, message: 'Phone and password are required' });
+    if (!phoneNumber || !password) {
+      return res.status(400).json({ success: false, message: 'Phone number and password are required' });
     }
 
     const db = getDb();
     const usersCol = db.collection('users');
 
     // 1. Check if phone is already registered
-    const existingUser = await usersCol.findOne({ phone });
+    const existingUser = await usersCol.findOne({ phoneNumber });
     if (existingUser) {
       return res.status(409).json({ success: false, message: 'Phone number already registered' });
     }
@@ -48,7 +48,7 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 
     const newUser = {
-      phone,
+      phoneNumber,
       password: hashedPassword,
       openids: openid ? [openid] : [],
       createdAt: new Date(),
@@ -61,7 +61,7 @@ router.post('/register', async (req: Request, res: Response) => {
     const result = await usersCol.insertOne(newUser);
     
     // 4. Generate Token
-    const token = generateToken({ userId: result.insertedId.toString(), phone });
+    const token = generateToken({ userId: result.insertedId.toString(), phoneNumber });
 
     res.json({
       success: true,
@@ -69,7 +69,7 @@ router.post('/register', async (req: Request, res: Response) => {
         token,
         user: {
           _id: result.insertedId,
-          phone,
+          phoneNumber,
           openids: newUser.openids
         }
       }

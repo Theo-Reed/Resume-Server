@@ -31,7 +31,7 @@ router.post('/loginByOpenid', async (req: Request, res: Response) => {
     // Generate Token
     const token = generateToken({ 
         userId: user._id.toString(), 
-        phone: user.phone || '' 
+        phoneNumber: user.phoneNumber || '' 
     });
 
     res.json({
@@ -40,7 +40,7 @@ router.post('/loginByOpenid', async (req: Request, res: Response) => {
         token,
         user: {
           _id: user._id,
-          phone: user.phone,
+          phoneNumber: user.phoneNumber,
           openids: user.openids || [user.openid],
           profile: user.profile
         }

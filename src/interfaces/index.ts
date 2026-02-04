@@ -26,24 +26,37 @@ const apiRouter = Router();
 // Mount Auth routes first (no middleware interference)
 apiRouter.use('/auth', auth);
 
-// 1. 影子账号/账号合并重定向中间件
-// 除了初始化和绑定手机号的接口外，所有业务接口自动映射到“主 OpenID”
+// 1. JWT 验证与身份映射中间件
 apiRouter.use(async (req, res, next) => {
-  const skipList = ['/initUser', '/login', '/getPhoneNumber', '/auth'];
+  const skipList = ['/initUser', '/login', '/getPhoneNumber', '/auth', '/system-config'];
   if (skipList.some(path => req.path.includes(path))) {
     return next();
   }
 
-  const openid = (req.headers['x-openid'] as string) || req.body.openid;
-  if (openid) {
-    const effectiveOpenid = await getEffectiveOpenid(openid);
-    if (effectiveOpenid !== openid) {
-      // 抹平差异：后续所有业务逻辑看到的都是主账号 ID
-      req.headers['x-openid'] = effectiveOpenid;
-      if (req.body.openid) req.body.openid = effectiveOpenid;
-    }
+  // 从 Header 获取 Token: Authorization: Bearer <token>
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
   }
-  next();
+
+  try {
+    const { verifyToken } = require('./auth/utils');
+    const decoded = verifyToken(token);
+    
+    // 将手机号存储在 req.user 中，作为业务逻辑中的唯一身份标识
+    // 这样做之后，业务接口直接取 req.user.phoneNumber 即可
+    (req as any).user = {
+      phoneNumber: decoded.phoneNumber,
+      userId: decoded.userId
+    };
+
+    next();
+  } catch (error) {
+    console.error('[JWT Middleware] Invalid token');
+    return res.status(403).json({ success: false, message: 'Invalid or expired token' });
+  }
 });
 
 // Modular Registration

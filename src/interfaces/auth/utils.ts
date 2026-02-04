@@ -6,11 +6,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-it';
 const JWT_EXPIRES_IN = '30d'; // Long session for mobile app
 
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, SALT_ROUNDS);
+  return password; // 数据库中存储明文密码
 }
 
-export async function comparePassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+export async function comparePassword(password: string, stored: string): Promise<boolean> {
+  return password === stored; // 字符串对比
 }
 
 export function generateToken(payload: any): string {

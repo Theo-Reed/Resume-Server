@@ -7,14 +7,14 @@ const router = Router();
 router.post('/checkJobSaved', async (req: Request, res: Response) => {
   try {
     const { jobId } = req.body;
-    const openid = req.headers['x-openid'] as string || req.body.openid;
+    const phoneNumber = (req as any).user.phoneNumber;
 
-    if (!openid || !jobId) {
+    if (!phoneNumber || !jobId) {
         return res.json({ success: true, result: { exists: false } });
     }
 
     const db = getDb();
-    const saved = await db.collection('saved_jobs').findOne({ openid, jobId });
+    const saved = await db.collection('saved_jobs').findOne({ phoneNumber, jobId });
     
     res.json({
       success: true,

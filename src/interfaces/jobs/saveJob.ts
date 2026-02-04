@@ -7,18 +7,19 @@ const router = Router();
 router.post('/saveJob', async (req: Request, res: Response) => {
   try {
     const { jobId } = req.body;
-    const openid = req.headers['x-openid'] as string || req.body.openid;
+    // 使用 phoneNumber 作为业务主键
+    const phoneNumber = (req as any).user.phoneNumber;
 
-    if (!openid || !jobId) {
-      return res.status(400).json({ success: false, message: 'Missing openid or jobId' });
+    if (!phoneNumber || !jobId) {
+      return res.status(400).json({ success: false, message: 'Missing phoneNumber or jobId' });
     }
 
     const db = getDb();
     await db.collection('saved_jobs').updateOne(
-        { openid, jobId },
+        { phoneNumber, jobId },
         { 
             $set: { 
-                openid, 
+                phoneNumber, 
                 jobId, 
                 createdAt: new Date() 
             } 
