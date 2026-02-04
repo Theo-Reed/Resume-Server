@@ -4,7 +4,7 @@ import { comparePassword, generateToken } from './utils';
 
 const router = Router();
 
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/auth/login', async (req: Request, res: Response) => {
   try {
     const { phoneNumber, password, openid } = req.body;
 

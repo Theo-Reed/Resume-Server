@@ -23,8 +23,8 @@ router.get('/api/ping', (req, res) => res.send('pong'));
 
 const apiRouter = Router();
 
-// 1. 无需鉴权的公共模块挂载
-apiRouter.use('/auth', auth);
+// 1. 无需鉴权的公共模块挂载 (扁平模式，由子模块内部声明 /auth 路径)
+apiRouter.use(auth);
 
 // 2. JWT 验证与身份映射中间件
 apiRouter.use(async (req, res, next) => {

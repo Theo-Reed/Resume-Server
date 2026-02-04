@@ -5,7 +5,7 @@ import loginByOpenid from './loginByOpenid';
 
 const router = Router();
 
-// 不再在 use 中指定路径，让子模块内自己定义路径（类似 user 模块的成功经验）
+// 彻底扁平化：不在这里指定路径，由子模块内部定义 /auth/...
 router.use(register);
 router.use(login);
 router.use(loginByOpenid);

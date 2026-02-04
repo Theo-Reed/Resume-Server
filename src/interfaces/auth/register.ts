@@ -5,7 +5,7 @@ import { ensureUser } from '../../userUtils'; // We might need to refactor this 
 
 const router = Router();
 
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/auth/register', async (req: Request, res: Response) => {
   try {
     const { phoneNumber, password, openid } = req.body;
 

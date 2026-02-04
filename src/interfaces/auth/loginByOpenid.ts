@@ -4,7 +4,7 @@ import { generateToken } from './utils';
 
 const router = Router();
 
-router.post('/loginByOpenid', async (req: Request, res: Response) => {
+router.post('/auth/loginByOpenid', async (req: Request, res: Response) => {
   try {
     const { openid } = req.body;
 
