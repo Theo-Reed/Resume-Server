@@ -14,7 +14,7 @@ router.post('/applyInviteCode', async (req: Request, res: Response) => {
     const openid = req.headers['x-openid'] as string || req.body.openid;
 
     if (!openid || !targetInviteCode) {
-      return res.status(400).json({ success: false, message: '参数缺失' });
+      return res.json({ success: false, message: '参数缺失' });
     }
 
     const db = getDb();
@@ -23,21 +23,21 @@ router.post('/applyInviteCode', async (req: Request, res: Response) => {
     // 1. 获取当前用户（受邀者）
     const invitee = await ensureUser(openid);
     if (!invitee) {
-      return res.status(404).json({ success: false, message: '记录未找到' });
+      return res.json({ success: false, message: '记录未找到' });
     }
 
     if ((invitee as any).hasUsedInviteCode) {
-      return res.status(400).json({ success: false, message: '您已经填写过邀请码了' });
+      return res.json({ success: false, message: '您已经填写过邀请码了' });
     }
 
     // 2. 找到邀请人 (邀请码现在区分大小写)
     const inviter = await usersCol.findOne({ inviteCode: targetInviteCode });
     if (!inviter) {
-      return res.status(404).json({ success: false, message: '无效的邀请码' });
+      return res.json({ success: false, message: '无效的邀请码' });
     }
 
     if (inviter.openid === openid) {
-      return res.status(400).json({ success: false, message: '不能填写自己的邀请码' });
+      return res.json({ success: false, message: '不能填写自己的邀请码' });
     }
 
     // 3. 执行奖励逻辑（增加 3 天会员 + 5 点算力）
