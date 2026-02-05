@@ -87,6 +87,7 @@ router.post('/loginByPhone', async (req: Request, res: Response) => {
           _id: user._id,
           phoneNumber: user.phoneNumber,
           openids: updatedOpenids,
+          language: user.language || 'Chinese',
           profile: user.profile
         }
       }

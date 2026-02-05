@@ -17,12 +17,20 @@ router.post('/updateUserLanguage', async (req: Request, res: Response) => {
     const db = getDb();
     const usersCol = db.collection('users');
 
+    // Update by matching either field
+    const query = {
+        $or: [
+            { openid: openid },
+            { openids: openid }
+        ]
+    };
+
     await usersCol.updateOne(
-        { openid },
-        { $set: { language } }
+        query,
+        { $set: { language, updatedAt: new Date() } }
     );
     
-    const user = await usersCol.findOne({ openid });
+    const user = await usersCol.findOne(query);
 
     res.json({
       success: true,

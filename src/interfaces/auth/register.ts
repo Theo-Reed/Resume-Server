@@ -79,7 +79,8 @@ router.post('/register', async (req: Request, res: Response) => {
         user: {
           _id: result.insertedId,
           phoneNumber,
-          openids: newUser.openids
+          openids: newUser.openids,
+          language: 'Chinese'
         }
       }
     });

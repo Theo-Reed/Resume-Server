@@ -53,6 +53,7 @@ router.post('/loginByOpenid', async (req: Request, res: Response) => {
           phone: user.phone || user.phoneNumber,
           phoneNumber: user.phone || user.phoneNumber,
           openids: user.openids || [user.openid],
+          language: user.language || 'Chinese',
           profile: user.profile
         }
       }
