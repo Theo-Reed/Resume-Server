@@ -41,8 +41,7 @@ router.post('/getPublicJobList', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: {
-        ok: true,
+      result: {
         jobs: jobs
       }
     });
