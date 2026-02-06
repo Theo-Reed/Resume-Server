@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { ensureUser, isTestUser } from '../../userUtils';
+import { ensureUser, isTestUser, formatUserResponse } from '../../userUtils';
 
 const router = Router();
 
@@ -21,7 +21,7 @@ router.post('/initUser', async (req: Request, res: Response) => {
       success: true, 
       result: {
         openid,
-        user: user || null,
+        user: user ? formatUserResponse(user) : null,
         isNewUser: !user,
         isTestUser: testUser
       }

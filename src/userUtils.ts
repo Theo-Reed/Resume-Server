@@ -126,6 +126,50 @@ export function evaluateResumeCompleteness(profile: any, lang: 'zh' | 'en') {
 }
 
 /**
+ * 标准化用户信息下发，并确保简历完整度是最新的
+ * @param user 数据库中的原始用户对象
+ */
+export function formatUserResponse(user: any) {
+  if (!user) return null;
+
+  const profile = user.resume_profile || {};
+  const zhProfile = profile.zh || {};
+  const enProfile = profile.en || {};
+
+  // 动态重新计算，确保下发的数据永远是最新的
+  const zhCompleteness = evaluateResumeCompleteness(zhProfile, 'zh');
+  const enCompleteness = evaluateResumeCompleteness(enProfile, 'en');
+
+  // 构建标准化的简历 Profile，注入最新的完整度
+  const resume_profile = {
+    ...profile,
+    zh: {
+      ...zhProfile,
+      completeness: zhCompleteness
+    },
+    en: {
+      ...enProfile,
+      completeness: enCompleteness
+    }
+  };
+
+  return {
+    _id: user._id,
+    openid: user.openid || (user.openids && user.openids[0]),
+    phone: user.phone || user.phoneNumber,
+    phoneNumber: user.phone || user.phoneNumber,
+    openids: user.openids || [user.openid],
+    language: user.language || 'AIChinese',
+    nickname: user.nickname || '',
+    avatar: user.avatar || '',
+    membership: user.membership || { level: 0 },
+    inviteCode: user.inviteCode || '',
+    resume_profile: resume_profile,
+    isAuthed: !!(user.phone || user.phoneNumber)
+  };
+}
+
+/**
  * 获取物理上生效的 OpenID（处理账号合并重定向）
  */
 export async function getEffectiveOpenid(openid: string): Promise<string> {

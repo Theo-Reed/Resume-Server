@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../../db';
 import { hashPassword, generateToken } from './utils';
+import { formatUserResponse } from '../../userUtils';
 import { StatusCode, StatusMessage } from '../../constants/statusCodes';
 
 const router = Router();
@@ -71,22 +72,18 @@ router.post('/register', async (req: Request, res: Response) => {
     // 4. Generate Token
     const token = generateToken({ userId: result.insertedId.toString(), phoneNumber });
 
+    // Construct user object for formatting
+    const userToFormat = {
+      ...newUser,
+      _id: result.insertedId
+    };
+
     res.json({
       success: true,
       code: StatusCode.SUCCESS,
       result: {
         token,
-        user: {
-          _id: result.insertedId,
-          phoneNumber,
-          openids: newUser.openids,
-          language: 'AIChinese',
-          nickname: '',
-          avatar: '',
-          membership: { level: 0 },
-          inviteCode: '',
-          resume_profile: newUser.resume_profile
-        }
+        user: formatUserResponse(userToFormat)
       }
     });
 

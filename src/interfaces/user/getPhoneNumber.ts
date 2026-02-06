@@ -3,7 +3,7 @@ import axios from 'axios';
 import { getAccessToken } from '../../utils/wechatUtils';
 import { getDb } from '../../db';
 import { generateToken } from '../auth/utils';
-import { generateInviteCode } from '../../userUtils';
+import { generateInviteCode, formatUserResponse } from '../../userUtils';
 
 const router = Router();
 
@@ -137,18 +137,7 @@ router.post('/getPhoneNumber', async (req: Request, res: Response) => {
         isNewUser: !existingUser,
         phone: phoneInfo.purePhoneNumber,
         countryCode: phoneInfo.countryCode,
-        user: {
-          _id: finalUser._id,
-          phone: finalUser.phone,
-          phoneNumber: finalUser.phone,
-          resume_profile: finalUser.resume_profile || finalUser.profile || {},
-          language: finalUser.language,
-          nickname: finalUser.nickname || '',
-          avatar: finalUser.avatar || '',
-          inviteCode: finalUser.inviteCode || '',
-          membership: finalUser.membership,
-          isAuthed: true
-        }
+        user: formatUserResponse(finalUser)
       }
     });
 

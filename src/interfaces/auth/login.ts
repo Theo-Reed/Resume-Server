@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../../db';
 import { comparePassword, generateToken } from './utils';
+import { formatUserResponse } from '../../userUtils';
 import { StatusCode, StatusMessage } from '../../constants/statusCodes';
 
 const router = Router();
@@ -83,20 +84,7 @@ router.post('/loginByPhone', async (req: Request, res: Response) => {
       code: StatusCode.SUCCESS,
       result: {
         token,
-        user: {
-          _id: user._id,
-          openid: openid || (updatedOpenids && updatedOpenids[0]),
-          phoneNumber: user.phoneNumber,
-          phone: user.phoneNumber,
-          openids: updatedOpenids,
-          language: user.language || 'AIChinese',
-          nickname: user.nickname || '',
-          avatar: user.avatar || '',
-          membership: user.membership || { level: 0 },
-          inviteCode: user.inviteCode || '',
-          resume_profile: user.resume_profile || {},
-          isAuthed: true
-        }
+        user: formatUserResponse(user)
       }
     });
 
