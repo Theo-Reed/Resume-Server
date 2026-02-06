@@ -16,62 +16,29 @@ router.post('/getSavedJobs', async (req: Request, res: Response) => {
 
     const db = getDb();
     
+    const skipNum = parseInt(skip as string) || 0;
+    const limitNum = parseInt(limit as string) || 20;
+
     // Step 1: Find all saved jobs for this user by phoneNumber
-    // Using a more robust pipeline that handles both string and ObjectId, 
-    // and checks both remote_jobs and custom_jobs collections.
+    // Highly simplified and robust pipeline for string ID matching
     const pipeline = [
       { $match: { phoneNumber } },
       { $sort: { createdAt: -1 } },
-      { $skip: Number(skip) },
-      { $limit: Number(limit) },
+      { $skip: skipNum },
+      { $limit: limitNum },
       {
         $lookup: {
           from: 'remote_jobs',
-          let: { sjJobId: '$jobId' },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $or: [
-                    { $eq: ['$_id', '$$sjJobId'] },
-                    // Safely try ObjectId conversion only if length is 24
-                    {
-                      $and: [
-                        { $eq: [{ $type: '$_id' }, 'objectId'] },
-                        { $eq: [{ $strLenCP: '$$sjJobId' }, 24] },
-                        { $eq: ['$_id', { $toObjectId: '$$sjJobId' }] }
-                      ]
-                    }
-                  ]
-                }
-              }
-            }
-          ],
+          localField: 'jobId',
+          foreignField: '_id',
           as: 'remote_details'
         }
       },
       {
         $lookup: {
           from: 'custom_jobs',
-          let: { sjJobId: '$jobId' },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $or: [
-                    { $eq: ['$_id', '$$sjJobId'] },
-                    {
-                      $and: [
-                        { $eq: [{ $type: '$_id' }, 'objectId'] },
-                        { $eq: [{ $strLenCP: '$$sjJobId' }, 24] },
-                        { $eq: ['$_id', { $toObjectId: '$$sjJobId' }] }
-                      ]
-                    }
-                  ]
-                }
-              }
-            }
-          ],
+          localField: 'jobId',
+          foreignField: '_id',
           as: 'custom_details'
         }
       },
