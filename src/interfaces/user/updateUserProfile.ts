@@ -41,11 +41,12 @@ router.post('/updateUserProfile', async (req: Request, res: Response) => {
         ]
       },
       { $set: updateFields },
-      { returnDocument: 'after' }
+      { returnDocument: 'after', includeResultMetadata: false }
     );
 
-    // Robust handling of MongoDB findOneAndUpdate return types (Document vs ModifyResult)
-    const updatedUser: any = (result as any).value || result;
+    // After updating to MongoDB Driver 6.x+, findOneAndUpdate returns the document directly
+    // unless includeResultMetadata is true. But to be 100% safe across environments:
+    const updatedUser: any = (result as any)?.value !== undefined ? (result as any).value : result;
 
     if (!updatedUser) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -55,10 +56,15 @@ router.post('/updateUserProfile', async (req: Request, res: Response) => {
     const profile = updatedUser.resume_profile || {};
     const completenessUpdates: any = {};
     
-    const zhRes = evaluateResumeCompleteness(profile.zh, 'zh');
+    // Ensure we are evaluating the latest data by merging the newly updated fields 
+    // if the document returned by MongoDB was somehow stale (though 'after' should prevent this)
+    const zhProfile = profile.zh || {};
+    const enProfile = profile.en || {};
+
+    const zhRes = evaluateResumeCompleteness(zhProfile, 'zh');
     completenessUpdates['resume_profile.zh.completeness'] = zhRes;
     
-    const enRes = evaluateResumeCompleteness(profile.en, 'en');
+    const enRes = evaluateResumeCompleteness(enProfile, 'en');
     completenessUpdates['resume_profile.en.completeness'] = enRes;
 
     // 额外的兼容性顶层字段更新 (可选，为了兼容旧代码)
@@ -67,14 +73,14 @@ router.post('/updateUserProfile', async (req: Request, res: Response) => {
     completenessUpdates['resume_percent_en'] = enRes.score;
     completenessUpdates['resume_completeness_en'] = enRes.level;
 
-    const finalResultUpdate = await usersCol.findOneAndUpdate(
+    const secondUpdate = await usersCol.findOneAndUpdate(
       { _id: updatedUser._id },
       { $set: completenessUpdates },
-      { returnDocument: 'after' }
+      { returnDocument: 'after', includeResultMetadata: false }
     );
-    
-    const finalUser = (finalResultUpdate as any).value || finalResultUpdate || updatedUser;
 
+    const finalUser = (secondUpdate as any)?.value !== undefined ? (secondUpdate as any).value : (secondUpdate || updatedUser);
+    
     res.json({
       success: true,
       result: {
