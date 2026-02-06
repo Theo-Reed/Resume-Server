@@ -21,9 +21,9 @@ router.post('/checkMemberStatus', async (req: Request, res: Response) => {
     res.json({
       success: true,
       result: {
-        success: true,
         inviteCode: (user as any).inviteCode,
         hasUsedInviteCode: (user as any).hasUsedInviteCode,
+        isAuthed: !!((user as any).phone || (user as any).phoneNumber),
         membership: (user as any).membership || {
           level: 0,
           expire_at: null,

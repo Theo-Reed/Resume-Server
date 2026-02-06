@@ -115,9 +115,10 @@ router.post('/generate', async (req: Request, res: Response) => {
     // 4. 立即返回 TaskID 给前端
     res.json({
       success: true,
-      task_id: taskId,
-      status: 'processing',
-      message: '简历生成任务已启动，正在后台处理中'
+      result: {
+        task_id: taskId,
+        status: 'processing'
+      }
     });
 
   } catch (error: any) {

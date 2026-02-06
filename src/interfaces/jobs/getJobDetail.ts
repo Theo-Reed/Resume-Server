@@ -34,9 +34,7 @@ router.post('/getJobDetail', async (req: Request, res: Response) => {
 
     res.json({
         success: true,
-        result: {
-            data: job
-        }
+        result: job
     });
 
   } catch (error) {

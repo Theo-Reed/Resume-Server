@@ -49,7 +49,7 @@ router.post('/getSavedJobs', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: {
+      result: {
         jobs: savedJobs.map(sj => ({
             ...sj.job_details,
             savedAt: sj.createdAt

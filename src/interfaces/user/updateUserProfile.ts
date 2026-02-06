@@ -46,8 +46,6 @@ router.post('/updateUserProfile', async (req: Request, res: Response) => {
     res.json({
       success: true,
       result: {
-        ok: true,
-        success: true,
         user: result
       }
     });

@@ -132,21 +132,22 @@ router.post('/getPhoneNumber', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: {
+      result: {
         token,
         isNewUser: !existingUser,
-        phone: phoneInfo.phoneNumber,
+        phone: phoneInfo.purePhoneNumber,
         countryCode: phoneInfo.countryCode,
         user: {
           _id: finalUser._id,
           phone: finalUser.phone,
           phoneNumber: finalUser.phone, // 兼容前端对 phoneNumber 的引用
-          profile: finalUser.profile,
+          profile: finalUser.profile || finalUser.resume_profile,
           language: finalUser.language,
           nickname: finalUser.nickname || '',
           avatar: finalUser.avatar || '',
           inviteCode: finalUser.inviteCode || '',
-          membership: finalUser.membership
+          membership: finalUser.membership,
+          isAuthed: true
         }
       }
     });

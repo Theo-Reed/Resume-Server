@@ -68,7 +68,6 @@ router.post('/createOrder', async (req: Request, res: Response) => {
         return res.json({
             success: true,
             result: {
-                success: true,
                 order_id: existingOrder._id.toString(),
                 pay_amount: payAmount,
                 payment: (existingOrder as any).paymentParams
@@ -126,7 +125,6 @@ router.post('/createOrder', async (req: Request, res: Response) => {
     res.json({
       success: true,
       result: {
-        success: true,
         order_id: order._id.toString(),
         pay_amount: payAmount, 
         payment: paymentParams
