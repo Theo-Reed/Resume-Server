@@ -38,7 +38,10 @@ apiRouter.use(async (req, res, next) => {
     '/register',
     '/system',
     '/getPublicJobList',
-    '/getFeaturedJobList'
+    '/getFeaturedJobList',
+    '/upload',
+    '/ocr',
+    '/refine-resume'
   ];
   if (skipList.some(path => req.path.includes(path))) {
     return next();
