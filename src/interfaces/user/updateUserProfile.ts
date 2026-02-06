@@ -41,12 +41,12 @@ router.post('/updateUserProfile', async (req: Request, res: Response) => {
         ]
       },
       { $set: updateFields },
-      { returnDocument: 'after', includeResultMetadata: false }
+      { returnDocument: 'after' }
     );
 
-    // After updating to MongoDB Driver 6.x+, findOneAndUpdate returns the document directly
-    // unless includeResultMetadata is true. But to be 100% safe across environments:
-    const updatedUser: any = (result as any)?.value !== undefined ? (result as any).value : result;
+    // MongoDB Node Driver 6.x+ returns a result object { value: document, ok: 1 ... }
+    // but some versions or configurations return the document directly.
+    const updatedUser: any = (result && (result as any).value) ? (result as any).value : result;
 
     if (!updatedUser) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -56,8 +56,7 @@ router.post('/updateUserProfile', async (req: Request, res: Response) => {
     const profile = updatedUser.resume_profile || {};
     const completenessUpdates: any = {};
     
-    // Ensure we are evaluating the latest data by merging the newly updated fields 
-    // if the document returned by MongoDB was somehow stale (though 'after' should prevent this)
+    // Calculate for both languages
     const zhProfile = profile.zh || {};
     const enProfile = profile.en || {};
 
@@ -67,14 +66,16 @@ router.post('/updateUserProfile', async (req: Request, res: Response) => {
     const enRes = evaluateResumeCompleteness(enProfile, 'en');
     completenessUpdates['resume_profile.en.completeness'] = enRes;
 
-    const secondUpdate = await usersCol.findOneAndUpdate(
+    // Persist scores back to the user document
+    const finalResult = await usersCol.findOneAndUpdate(
       { _id: updatedUser._id },
       { $set: completenessUpdates },
-      { returnDocument: 'after', includeResultMetadata: false }
+      { returnDocument: 'after' }
     );
-
-    const finalUser = (secondUpdate as any)?.value !== undefined ? (secondUpdate as any).value : (secondUpdate || updatedUser);
     
+    // Determine the final user document to return
+    const finalUser = (finalResult && (finalResult as any).value) ? (finalResult as any).value : (finalResult || updatedUser);
+
     res.json({
       success: true,
       result: {
