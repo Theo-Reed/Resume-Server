@@ -12,13 +12,15 @@ router.post('/getFeaturedJobList', async (req: Request, res: Response) => {
     // 构建查询条件
     const query: any = { is_deleted: { $ne: true } };
     
-    // 地区/类型筛选
+    // 地区/类型筛选 - 默认为海外和 Web3
     if (type && type !== '全部') {
       if (Array.isArray(type)) {
         query.type = { $in: type };
       } else {
         query.type = type;
       }
+    } else {
+      query.type = { $in: ['海外', 'Web3'] };
     }
 
     // 来源筛选
