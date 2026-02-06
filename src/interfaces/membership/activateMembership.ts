@@ -14,7 +14,6 @@ router.post('/activateMembership', async (req: Request, res: Response) => {
     res.json({
       success: true,
       result: {
-        success: true,
         user
       }
     });
