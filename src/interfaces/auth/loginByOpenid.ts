@@ -40,7 +40,7 @@ router.post('/loginByOpenid', async (req: Request, res: Response) => {
     // Generate Token
     const token = generateToken({ 
         userId: user._id.toString(), 
-        phoneNumber: user.phoneNumber || '' 
+        phoneNumber: user.phone || user.phoneNumber || '' 
     });
 
     res.json({

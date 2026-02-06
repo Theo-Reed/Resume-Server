@@ -8,18 +8,17 @@ const router = Router();
 router.post('/getSavedJobs', async (req: Request, res: Response) => {
   try {
     const { skip = 0, limit = 20 } = req.body;
-    const openid = req.headers['x-openid'] as string || req.body.openid;
+    const phoneNumber = (req as any).user.phoneNumber;
 
-    if (!openid) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!phoneNumber) {
+      return res.status(401).json({ success: false, message: 'Unauthorized: Missing phoneNumber' });
     }
 
     const db = getDb();
     
-    // Step 1 & 2 & 3: Join saved_jobs with jobs
-    // Note: jobId in saved_jobs might be a string, while _id in jobs is ObjectId
+    // Step 1: Find all saved jobs for this user by phoneNumber
     const pipeline = [
-      { $match: { openid } },
+      { $match: { phoneNumber } },
       { $sort: { createdAt: -1 } },
       { $skip: Number(skip) },
       { $limit: Number(limit) },
