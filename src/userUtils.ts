@@ -64,37 +64,31 @@ export function evaluateResumeCompleteness(profile: any, lang: 'zh' | 'en') {
   if (profile.name) score += 10;
   
   // 2. 照片: 5%
-  if (profile.photo || profile.avatar) score += 5;
+  if (profile.photo) score += 5;
   
   // 3. 性别/生日: 5% + 5%
   if (profile.gender) score += 5;
   if (profile.birthday) score += 5;
   
   // 4. 联系方式: 15%
-  const contact = profile.contact || {};
   if (lang === 'zh') {
-    if (profile.wechat || profile.phone || profile.email || contact.wechat || contact.phone || contact.email) score += 15;
+    if (profile.wechat || profile.phone || profile.email) score += 15;
   } else {
-    // 英文版联系方式较多
-    if (profile.email || profile.phone_en || profile.phone || profile.whatsapp || profile.telegram || profile.linkedin || profile.website ||
-        contact.email || contact.phone || contact.whatsapp || contact.telegram || contact.linkedin || contact.website) score += 15;
+    // 英文版
+    if (profile.email || profile.phone_en || profile.phone || profile.whatsapp || profile.telegram || profile.linkedin || profile.website) score += 15;
   }
   
   // 5. 教育经历: 20%
-  const educations = profile.educations || profile.education;
-  if (Array.isArray(educations) && educations.length > 0) score += 20;
+  if (Array.isArray(profile.educations) && profile.educations.length > 0) score += 20;
   
   // 6. 工作经历: 20%
-  const workExperiences = profile.workExperiences || profile.workExperience;
-  if (Array.isArray(workExperiences) && workExperiences.length > 0) score += 20;
+  if (Array.isArray(profile.workExperiences) && profile.workExperiences.length > 0) score += 20;
   
   // 7. 技能: 10%
-  const skills = profile.skills || profile.professionalSkills || profile.skill;
-  if (Array.isArray(skills) && skills.length > 0) score += 10;
+  if (Array.isArray(profile.skills) && profile.skills.length > 0) score += 10;
   
   // 8. 证书: 5%
-  const certificates = profile.certificates || profile.certificate;
-  if (Array.isArray(certificates) && certificates.length > 0) score += 5;
+  if (Array.isArray(profile.certificates) && profile.certificates.length > 0) score += 5;
   
   // 9. AI 指令: 5%
   if (profile.aiMessage) score += 5;
@@ -105,16 +99,15 @@ export function evaluateResumeCompleteness(profile: any, lang: 'zh' | 'en') {
 
   // Level 1: 基础要求
   const hasName = !!profile.name;
-  const hasEdu = Array.isArray(educations) && educations.length > 0;
+  const hasEdu = Array.isArray(profile.educations) && profile.educations.length > 0;
   let hasContact = false;
 
-  const contactInfo = profile.contact || {};
   if (lang === 'zh') {
     // 中文：姓名、(微信号 或 邮箱)、毕业院校
-    hasContact = !!(profile.wechat || profile.email || contactInfo.wechat || contactInfo.email);
+    hasContact = !!(profile.wechat || profile.email);
   } else {
     // 英文：姓名、邮箱、毕业院校
-    hasContact = !!(profile.email || contactInfo.email);
+    hasContact = !!profile.email;
   }
                    
   let level = 0;
