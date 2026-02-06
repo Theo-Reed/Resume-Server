@@ -1,4 +1,5 @@
 export enum StatusCode {
+  SUCCESS = 200,
   // Standard HTTP Status Codes (Passed from network layer)
   HTTP_FORBIDDEN = 403,
   HTTP_CONFLICT = 409,

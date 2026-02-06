@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../../db';
 import { hashPassword, generateToken } from './utils';
-import { StatusCode } from '../../constants/statusCodes';
+import { StatusCode, StatusMessage } from '../../constants/statusCodes';
 
 const router = Router();
 

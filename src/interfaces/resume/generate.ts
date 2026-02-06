@@ -4,7 +4,7 @@ import { getDb } from '../../db';
 import { ensureUser } from '../../userUtils';
 import { runBackgroundTask, TaskServices } from '../../taskRunner';
 import { GenerateFromFrontendRequest } from '../../types';
-import { StatusCode } from '../../constants/statusCodes';
+import { StatusCode, StatusMessage } from '../../constants/statusCodes';
 
 const router = Router();
 const COLLECTION_RESUMES = 'generated_resumes';
