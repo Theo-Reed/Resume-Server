@@ -140,8 +140,8 @@ router.post('/getPhoneNumber', async (req: Request, res: Response) => {
         user: {
           _id: finalUser._id,
           phone: finalUser.phone,
-          phoneNumber: finalUser.phone, // 兼容前端对 phoneNumber 的引用
-          profile: finalUser.profile || finalUser.resume_profile,
+          phoneNumber: finalUser.phone,
+          resume_profile: finalUser.resume_profile || finalUser.profile || {},
           language: finalUser.language,
           nickname: finalUser.nickname || '',
           avatar: finalUser.avatar || '',

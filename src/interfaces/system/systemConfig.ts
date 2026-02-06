@@ -10,7 +10,7 @@ export const systemConfig = async (req: Request, res: Response) => {
     if (config) {
       res.json({
           success: true,
-          data: {
+          result: {
               isBeta: config.isBeta,
               isMaintenance: config.isMaintenance
           }
@@ -18,7 +18,7 @@ export const systemConfig = async (req: Request, res: Response) => {
     } else {
       res.json({
           success: true,
-          data: {
+          result: {
               isBeta: false,
               isMaintenance: false
           }
