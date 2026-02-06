@@ -20,7 +20,7 @@ router.post('/getFeaturedJobList', async (req: Request, res: Response) => {
         query.type = type;
       }
     } else {
-      query.type = { $in: ['海外', 'Web3'] };
+      query.type = { $in: ['国外', 'web3'] };
     }
 
     // 来源筛选
