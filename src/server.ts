@@ -43,6 +43,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Global Logging Middleware
 app.use((req, res, next) => {
+  // 启用 Cross-Origin Isolation（用于允许 SharedArrayBuffer 等特性）
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
