@@ -102,6 +102,7 @@ router.post('/generate', async (req: Request, res: Response) => {
       openid: user.openid, // Keep openid for reference
       task_id: taskId,
       status: 'processing',
+      consumedType: consumedType, // 记录消耗类型用于异常退回
       jobTitle: payload.job_data.title,
       jobTitle_cn: payload.job_data.title_chinese,
       jobTitle_en: payload.job_data.title_english,

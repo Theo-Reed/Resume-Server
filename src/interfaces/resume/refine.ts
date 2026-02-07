@@ -44,6 +44,7 @@ router.post('/refine-resume', upload.single('file'), async (req: Request, res: R
         }
 
         // --- Quota Check ---
+        let consumedType = '';
         const membership = (user as any).membership || {};
         const quota = membership.pts_quota || { limit: 0, used: 0 };
         const topupBalance = membership.topup_quota || 0;
@@ -51,8 +52,10 @@ router.post('/refine-resume', upload.single('file'), async (req: Request, res: R
         const isMemberActive = membership.expire_at && new Date(membership.expire_at) > now;
 
         if (isMemberActive && quota.used < quota.limit) {
+            consumedType = 'monthly';
             await usersCol.updateOne({ _id: user._id }, { $inc: { 'membership.pts_quota.used': 1 } });
         } else if (topupBalance > 0) {
+            consumedType = 'topup';
             await usersCol.updateOne({ _id: user._id }, { $inc: { 'membership.topup_quota': -1 } });
         } else {
              return res.status(StatusCode.HTTP_FORBIDDEN).json({ 
@@ -64,7 +67,19 @@ router.post('/refine-resume', upload.single('file'), async (req: Request, res: R
 
         // 1. Extract Profile
         console.log(`[Refine] Extracting info from ${file.originalname} (${file.mimetype})...`);
-        const extractedData = await services.aiService.extractResumeInfoFromDocument(file.buffer, file.mimetype);
+        let extractedData: any;
+        try {
+            extractedData = await services.aiService.extractResumeInfoFromDocument(file.buffer, file.mimetype);
+        } catch (extractError: any) {
+            console.error(`[Refine] AI Extraction failed:`, extractError);
+            // Refund quota if extraction fails completely
+            if (consumedType === 'monthly') {
+                await usersCol.updateOne({ _id: user._id }, { $inc: { 'membership.pts_quota.used': -1 } });
+            } else if (consumedType === 'topup') {
+                await usersCol.updateOne({ _id: user._id }, { $inc: { 'membership.topup_quota': 1 } });
+            }
+            return res.status(500).json({ success: false, message: '无法解析简历内容，请检查文件格式。' });
+        }
 
         // --- Identity Info Validation ---
         // 必须识别到姓名，且至少有一个联系方式 (手机、邮箱或微信)
@@ -74,6 +89,14 @@ router.post('/refine-resume', upload.single('file'), async (req: Request, res: R
         
         if (!extractedData.name || (!hasMobile && !hasEmail && !hasWechat)) {
             console.warn(`[Refine] Extraction failed: Missing identity info. Name: ${extractedData.name}, Contact: ${hasMobile||hasEmail||hasWechat}`);
+            
+            // Refund quota
+            if (consumedType === 'monthly') {
+                await usersCol.updateOne({ _id: user._id }, { $inc: { 'membership.pts_quota.used': -1 } });
+            } else if (consumedType === 'topup') {
+                await usersCol.updateOne({ _id: user._id }, { $inc: { 'membership.topup_quota': 1 } });
+            }
+
             return res.status(StatusCode.HTTP_FORBIDDEN).json({
                 success: false,
                 code: StatusCode.MISSING_IDENTITY_INFO,
@@ -176,6 +199,7 @@ router.post('/refine-resume', upload.single('file'), async (req: Request, res: R
            openid: userAuth.phoneNumber,
            phoneNumber: userAuth.phoneNumber,
            status: 'processing',
+           consumedType, // 用于后台任务失败时的额度退回
            createTime: now,
            payload: requestPayload
         });

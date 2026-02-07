@@ -135,6 +135,8 @@ async function executeTask(taskId: string, payload: GenerateFromFrontendRequest,
 
     // 更新数据库状态为失败
     try {
+      const task = await db.collection(COLLECTION_RESUMES).findOne({ task_id: taskId });
+      
       await db.collection(COLLECTION_RESUMES).updateOne({ task_id: taskId }, {
         $set: {
           status: 'failed',
@@ -142,8 +144,21 @@ async function executeTask(taskId: string, payload: GenerateFromFrontendRequest,
           completeTime: new Date()
         }
       });
+
+      // --- Quota Refund Logic ---
+      if (task && task.phoneNumber && task.consumedType) {
+        console.log(`[Task ${taskId}] 正在尝试为用户 ${task.phoneNumber} 退回额度 (${task.consumedType})...`);
+        const usersCol = db.collection('users');
+        if (task.consumedType === 'monthly') {
+          await usersCol.updateOne({ phone: task.phoneNumber }, { $inc: { 'membership.pts_quota.used': -1 } });
+        } else if (task.consumedType === 'topup') {
+          await usersCol.updateOne({ phone: task.phoneNumber }, { $inc: { 'membership.topup_quota': 1 } });
+        }
+        console.log(`[Task ${taskId}] 额度已退回。`);
+      }
+
     } catch (dbError) {
-      console.error(`[Task ${taskId}] ❌ 无法更新失败状态到数据库:`, dbError);
+      console.error(`[Task ${taskId}] ❌ 无法回滚状态或退回额度:`, dbError);
     }
   }
 }
