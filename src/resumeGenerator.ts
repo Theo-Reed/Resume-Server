@@ -487,10 +487,10 @@ export class ResumeGenerator {
    * 任何元素的标题如果出现在页面的底部危险区域 (Danger Zone)，
    * 就强制加 margin-top 把它推到下一页。
    */
-  private async applySmartPageBreaks(page: Page): Promise<void> {
+  private async applySmartPageBreaks(page: Page, dangerZone: number = 100): Promise<void> {
     try {
-      await page.evaluate((PAGE_HEIGHT) => {
-        const DANGER_ZONE = 100; // 底部 100px 为危险区域
+      await page.evaluate((PAGE_HEIGHT, DANGER_ZONE) => {
+        // const DANGER_ZONE = 100; // Passed as arg
         
         const items = document.querySelectorAll('.work-item, .education-item, .project-item, .section-title');
         
@@ -505,7 +505,7 @@ export class ResumeGenerator {
              (item as HTMLElement).style.marginTop = '0px'; 
           }
         });
-      }, this.A4_USABLE_HEIGHT);
+      }, this.A4_USABLE_HEIGHT, dangerZone);
       
       // 等待重新布局
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -1047,7 +1047,7 @@ export class ResumeGenerator {
       });
 
       // Step C: Simulation Logic (Reused for Strategy)
-      const simulateLayout = (config: number[]) => {
+      const simulateLayout = (config: number[], dangerZone = 100) => {
           const activeBlocks = allBlocks.filter(b => {
                if (b.type === 'job_bullet' || (b.type === 'gap' && b.bulletIndex !== undefined)) {
                    // If it's a bullet OR a gap associated with a bullet
@@ -1060,7 +1060,7 @@ export class ResumeGenerator {
 
           let currentY = 0;
           let pageNum = 1;
-          const DANGER_ZONE = 100; // Must match applySmartPageBreaks
+          const DANGER_ZONE = dangerZone; // Adjustable Danger Zone
           
           for (let i = 0; i < activeBlocks.length; i++) {
               const blk = activeBlocks[i];
@@ -1163,8 +1163,34 @@ export class ResumeGenerator {
           }
       }
 
+      // --- SECOND ROUND: Aggressive Filling (Relaxed Constraints) ---
+      // 尝试通过放宽排版约束（如允许标题更靠近底部），进一步利用页面空间（针对 90%+ 填充率的情况）
+      let finalDangerZone = 100; // Default Strict (100px)
+      {
+          const RELAXED_DANGER_ZONE = 60; // 从 100px 放宽到 60px
+          console.log(`[Solver] Round 2: Attempting Aggressive Fill (DangerZone: ${RELAXED_DANGER_ZONE}px)...`);
+          
+          let changed = true;
+          while(changed) {
+              changed = false;
+              for (let j = 0; j < numJobs; j++) {
+                  if (currentConfig[j] < maxBulletsPerJob[j]) {
+                      currentConfig[j]++;
+                      const sim = simulateLayout(currentConfig, RELAXED_DANGER_ZONE);
+                      if (sim.pages <= targetPages) {
+                          changed = true; // Squeezed in!
+                          finalDangerZone = RELAXED_DANGER_ZONE; // Commit to relaxed zone
+                          console.log(`   -> [Round 2] Added bullet to Job ${j} (Count: ${currentConfig[j]})`);
+                      } else {
+                          currentConfig[j]--; // Revert
+                      }
+                  }
+              }
+          }
+      }
+
       // Calculate Final Stats
-      const finalSim = simulateLayout(currentConfig);
+      const finalSim = simulateLayout(currentConfig, finalDangerZone);
       const totalAvailable = targetPages * PAGE_HEIGHT;
       const totalUsed = ((finalSim.pages - 1) * PAGE_HEIGHT) + finalSim.lastPageHeight;
       const fillPercent = ((totalUsed / totalAvailable) * 100).toFixed(1);
@@ -1193,7 +1219,7 @@ export class ResumeGenerator {
       // So we must setContent here.
       await page.setContent(finalHtml, { waitUntil: 'load' });
       // adjustLayoutDensity removed per user request
-      await this.applySmartPageBreaks(page); // Final Breaks
+      await this.applySmartPageBreaks(page, finalDangerZone); // Final Breaks with Dynamic Danger Zone
       
       return await page.content();
   }

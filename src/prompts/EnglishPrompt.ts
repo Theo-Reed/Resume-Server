@@ -146,20 +146,25 @@ Experience ${i + 1}:
 5. **Professional Skills**: 4 categories, 4 items each.
    - **Principle**: Base skills on ${targetTitle} requirements. You may IGNORE user's original skills if irrelevant.
 6. **Responsibility Description (Crucial)**:
-   - 4-6 bullets per role.
+   - **Quantity**: MUST generate **EXACTLY 6 bullets** per role.
+   - **Ordering**: Sort by importance (highest impact/results first).
    - **Start with STRONG ACTION VERBS** (e.g., Spearheaded, Orchestrated, Engineered, Analyzed, Revamped). 
    - **Avoid Weak Verbs**: Avoid "Responsible for", "Helped with", "Assisted".
    - **Quantifiable Results**: MUST use numbers, percentages, metrics.
    - **STAR Method**: Situation, Task, Action, Result.
+   - **Bolding Requirements (Mandatory)**: 
+     - **The first bullet point** in each role MUST include exactly one segment of bolded text (using <b> tags) on a key achievement or metric.
+     - **Exactly two additional bullet points** among the remaining items MUST each include exactly one segment of bolded text (using <b> tags).
+     - **Total**: Each job description should have exactly 3 bullet points containing bolded text.
    - **Examples**:
-     * ✅ "Engineered core optimization reducing latency from 500ms to 200ms (+60%), supporting 3x DAU growth."
-     * ✅ "Spearheaded 0-to-1 project architecture, driven 200% user growth to 300k DAU."
+     * ✅ "Engineered core optimization reducing latency from <b>500ms to 200ms (+60%)</b>, supporting 3x DAU growth."
+     * ✅ "Spearheaded <b>0-to-1 project architecture</b>, driven 200% user growth to 300k DAU."
      * ❌ "Responsible for system optimization." (Too weak)
    - Ensure the user sounds like a **Key Contributor**, not just a participant.
 7. **No Abbreviations for Professional Terms**: DO NOT use acronyms or abbreviations followed by parentheses for professional methodologies or concepts (e.g., ❌ Ecosystem-Led Growth (ELG)). Always use the full form: ✅ Ecosystem-Led Growth. This applies to all industry-specific terminology.
 8. **Formatting**: 
    - **Personal Introduction**: MUST have exactly 2 bold keywords (<b>...</b>).
-   - **Work Experience**: Use <b> for key metrics or results (optional).
+   - **Work Experience**: MUST follow the specific 1+2 bolding rule defined in section 6.
    - **Constraint**: Do NOT use markdown bold like **text** in JSON strings.
 
 ### 7. Output Format (Pure JSON)
