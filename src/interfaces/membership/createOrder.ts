@@ -89,7 +89,13 @@ router.post('/createOrder', async (req: Request, res: Response) => {
     const expireAt = new Date(createdAt.getTime() + 2 * 60 * 60 * 1000); // 2 hours
 
     let paymentParams;
-    if (hasWxConfig()) {
+    let paymentError = null;
+    
+    // Explicitly log the config status to help debugging
+    const isWxEnabled = hasWxConfig();
+    console.log(`[Payment] Config check: ${isWxEnabled ? 'Enabled (Real Pay)' : 'Disabled (Mock Pay)'}`);
+
+    if (isWxEnabled) {
         try {
             paymentParams = await getMiniProgramPaymentParams(
                 `Membership-${(scheme.name_chinese || scheme.name)}`,
@@ -99,20 +105,20 @@ router.post('/createOrder', async (req: Request, res: Response) => {
             );
         } catch (err: any) {
             console.error('[Payment] WeChat Prepay Failed:', err);
+            paymentError = err.message || 'Unknown WeChat Error';
 
             // Special Case: WeChat says Order Paid (already exists on their end)
             const errorCode = err.data?.code || err.code || "";
             if (errorCode === 'ORDERPAID' || err.message?.includes('ORDERPAID')) {
-                // If it's already paid but we don't have record, we just activate
-                // Note: In real enterprise, we should find that specific order first.
-                // For now, we attempt to activate by the ID we tried to use.
                 return res.json({ success: true, isAlreadyPaid: true, message: 'Order already paid at WeChat' });
             }
-
+            
+            // Do NOT fall through to success if real payment fails.
             return res.status(500).json({ success: false, message: 'WeChat initiation failed: ' + err.message });
         }
     } else {
         // Mock payment for non-production environments
+        console.log('[Payment] Using MOCK parameters');
         paymentParams = {
             timeStamp: Math.floor(Date.now() / 1000).toString(),
             nonceStr: 'mock_' + orderId.toString().slice(-6),
@@ -120,6 +126,12 @@ router.post('/createOrder', async (req: Request, res: Response) => {
             signType: 'RSA',
             paySign: 'mock_sign'
         };
+    }
+    
+    // Safety Net: Ensure paymentParams exists before proceeding
+    if (!paymentParams) {
+         console.error('[Payment] FATAL: Payment params generated as undefined/null', { isWxEnabled });
+         return res.status(500).json({ success: false, message: 'Failed to generate payment parameters' });
     }
 
     // 6. Persistence

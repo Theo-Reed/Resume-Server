@@ -7,7 +7,11 @@ import crypto from 'crypto';
 type IRequestParams = any;
 
 const privateKeyPath = process.env.WX_PRIVATE_KEY_PATH || 'apiclient_key.pem';
-const publicCertPath = process.env.WX_PUBLIC_CERT_PATH || 'apiclient_cert.pem';
+// FIX: .env uses 'pub_key.pem' for WX_PUBLIC_CERT_PATH, but file on disk is 'apiclient_cert.pem' for the cert?
+// Actually 'pub_key.pem' usually refers to the platform public key, while 'apiclient_cert.pem' is the merchant cert.
+// However, WxPay init requires the merchant cert content as 'publicKey' (or 'cert' in some libs).
+// Looking at standard layout: apiclient_key.pem (Private), apiclient_cert.pem (Public Cert).
+const publicCertPath = process.env.WX_MERCHANT_CERT_PATH || 'apiclient_cert.pem';
 
 let pay: any = null;
 let privateKeyContent: Buffer | null = null;
@@ -47,8 +51,17 @@ export const getWxPayClient = (): any => {
 
 export const hasWxConfig = () => {
     try {
-        const pkPath = path.resolve(process.cwd(), privateKeyPath);
-        const pubPath = path.resolve(process.cwd(), publicCertPath);
+        // Correct logic to check file existence.
+        // NOTE: In .env and index.ts, 'publicCertPath' defaults to 'apiclient_cert.pem' in index.ts
+        // BUT in .env it is set to 'pub_key.pem'. This creates a CONFLICT.
+        // We must check what the code actually USES.
+        
+        let pkPath = path.resolve(process.cwd(), privateKeyPath);
+        let pubPath = path.resolve(process.cwd(), publicCertPath);
+        
+        // Debugging LOG (To help diagnose why it might be returning true wrongly or correctly)
+        // console.log('[WxPay Config Check]', { pkPath, pubPath, appId: !!process.env.WX_APPID, mchId: !!process.env.WX_MCHID });
+
         return fs.existsSync(pkPath) && fs.existsSync(pubPath) && !!process.env.WX_APPID && !!process.env.WX_MCHID;
     } catch { return false; }
 }
