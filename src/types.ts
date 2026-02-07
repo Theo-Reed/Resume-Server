@@ -124,7 +124,6 @@ export interface JobData {
   description_english: string;
   city: string;
   experience: string;
-  _is_paid?: boolean;
 }
 
 /**
