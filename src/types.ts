@@ -10,6 +10,12 @@ export interface ContactInfo {
   wechat?: string;
   /** 个人网站 */
   website?: string;
+  /** 领英 */
+  linkedin?: string;
+  /** 电报 */
+  telegram?: string;
+  /** 地址 */
+  location?: string;
 }
 
 /**
@@ -72,6 +78,8 @@ export interface ResumeData {
   name: string;
   /** 岗位 */
   position: string;
+  /** 性别 */
+  gender?: string;
   /** 联系方式 */
   contact: ContactInfo;
   /** 几年经验 */
@@ -149,6 +157,10 @@ export interface UserResumeProfile {
   skills: string[];
   aiMessage: string;
   website?: string;
+  linkedin?: string;
+  telegram?: string;
+  location?: string;
+  phone_en?: string;
 }
 
 /**
@@ -171,23 +183,21 @@ export function mapFrontendRequestToResumeData(payload: GenerateFromFrontendRequ
   const job = payload.job_data;
   const isEnglish = payload.language === 'english';
 
-  // 处理姓名映射 (中文环境包含性别逻辑)
+  // 处理姓名映射 (中文环境不再在名字后面拼性别)
   let displayName = profile.name;
-  if (!isEnglish) {
-     // 如果没有照片，在名字后面拼上性别
-     if (!profile.photo || profile.photo.trim() === '') {
-        displayName = `${displayName} (${profile.gender})`;
-     }
-  }
 
   return {
     name: displayName,
     position: isEnglish ? (job.title_english || job.title) : (job.title_chinese || job.title),
+    gender: profile.gender,
     contact: {
       email: profile.email,
       wechat: profile.wechat,
       phone: profile.phone,
       website: profile.website,
+      linkedin: profile.linkedin,
+      telegram: profile.telegram,
+      location: profile.location,
     },
     avatar: profile.photo,
     languages: isEnglish ? 'english' : 'chinese',

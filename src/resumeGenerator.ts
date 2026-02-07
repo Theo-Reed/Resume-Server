@@ -235,20 +235,39 @@ export class ResumeGenerator {
   /**
    * 格式化联系方式
    */
-  private formatContactInfo(contact: ResumeData['contact'], yearsOfExperience: number, languages?: string): string {
+  private formatContactInfo(contact: ResumeData['contact'], yearsOfExperience: number, languages?: string, gender?: string, hasAvatar?: boolean): string {
     const items: string[] = [];
+
+    const isEnglish = languages === 'english';
+    
+    // 如果没有照片且不是英文（中文环境），在联系方式最前面显示性别
+    if (!hasAvatar && gender && !isEnglish) {
+      items.push(this.escapeHtml(gender));
+    }
     
     if (contact.email) {
       items.push(this.escapeHtml(contact.email));
     }
-    if (contact.wechat) {
-      items.push(this.escapeHtml(contact.wechat));
-    }
     if (contact.phone) {
       items.push(this.escapeHtml(contact.phone));
     }
+    if (contact.location) {
+      const locationIcon = `<svg viewBox="0 0 128 128" style="width: 12px; height: 12px; margin-right: 3px; display: inline-block; vertical-align: -1px;"><path d="m68.63 59.34-9.27-1.52s-.45 38.95-.06 43.57c0 .01 2.39 14.08 2.98 21.07.07.87.8 1.55 1.68 1.55s1.61-.67 1.69-1.55l2.99-21.07c-.02-6.35-.01-42.05-.01-42.05" style="fill:#82aec0"/><path d="M68.59 59.77s.04 5.9.04 7.37-1.31 3.83-4.7 3.83-4.64-2.31-4.64-3.73.01-7.45.01-7.45z" style="fill:#2f7889"/><path d="M35.72 32.36v1.42c.85 14.04 11.91 25.52 25.95 26.79.85.14 1.56.14 2.41.14s1.56 0 2.27-.14c14.04-1.28 25.09-12.48 25.94-26.8v-1.42C92.43 16.76 79.67 4 64.07 4S35.72 16.62 35.72 32.36" style="fill:#f44336"/><path d="M66.97 8.77c2.66 2.62 1.97 5.66.52 8.29-1.63 2.96-5.42 4.45-11.01 12.51-4.19 6.04-13.08 3.28-14.33-1.51-.96-3.68-.19-7.53 1.8-10.71C51.5 5.27 64.31 6.15 66.97 8.77" style="fill:#ff7555"/></svg>`;
+      items.push(`${locationIcon}${this.escapeHtml(contact.location)}`);
+    }
+    if (contact.wechat) {
+      const wechatIcon = `<svg viewBox="0 0 48 48" style="width: 12px; height: 12px; margin-right: 3px; display: inline-block; vertical-align: -1px;"><path fill="#8BC34A" d="M18,6C9.2,6,2,12,2,19.5c0,4.3,2.3,8,6,10.5l-2,6l6.3-3.9C14,32.7,16,33,18,33c8.8,0,16-6,16-13.5C34,12,26.8,6,18,6z"/><path fill="#7CB342" d="M20,29c0-6.1,5.8-11,13-11c0.3,0,0.6,0,0.9,0c-0.1-0.7-0.3-1.4-0.5-2c-0.1,0-0.3,0-0.4,0c-8.3,0-15,5.8-15,13c0,1.4,0.3,2.7,0.7,4c0.7,0,1.4-0.1,2.1-0.2C20.3,31.6,20,30.3,20,29z"/><path fill="#CFD8DC" d="M46,29c0-6.1-5.8-11-13-11c-7.2,0-13,4.9-13,11s5.8,11,13,11c1.8,0,3.5-0.3,5-0.8l5,2.8l-1.4-4.8C44.3,35.2,46,32.3,46,29z"/><path fill="#33691E" d="M14,15c0,1.1-0.9,2-2,2s-2-0.9-2-2s0.9-2,2-2S14,13.9,14,15z M24,13c-1.1,0-2,0.9-2,2s0.9,2,2,2s2-0.9,2-2S25.1,13,24,13z"/><path fill="#546E7A" d="M30,26.5c0,0.8-0.7,1.5-1.5,1.5S27,27.3,27,26.5s0.7-1.5,1.5-1.5S30,25.7,30,26.5z M37.5,25c-0.8,0-1.5,0.7-1.5,1.5s0.7,1.5,1.5,1.5s1.5-0.7,1.5-1.5S38.3,25,37.5,25z"/></svg>`;
+      items.push(`${wechatIcon}${this.escapeHtml(contact.wechat)}`);
+    }
+    if (contact.telegram) {
+      const telegramIcon = `<svg viewBox="0 0 48 48" style="width: 12px; height: 12px; margin-right: 3px; display: inline-block; vertical-align: -1px;"><path fill="#29b6f6" d="M24 4A20 20 0 1 0 24 44A20 20 0 1 0 24 4Z"/><path fill="#fff" d="M33.95,15l-3.746,19.126c0,0-0.161,0.874-1.245,0.874c-0.576,0-0.873-0.274-0.873-0.274l-8.114-6.733 l-3.97-2.001l-5.095-1.355c0,0-0.907-0.262-0.907-1.012c0-0.625,0.933-0.923,0.933-0.923l21.316-8.468 c-0.001-0.001,0.651-0.235,1.126-0.234C33.667,14,34,14.125,34,14.5C34,14.75,33.95,15,33.95,15z"/><path fill="#b0bec5" d="M23,30.505l-3.426,3.374c0,0-0.149,0.115-0.348,0.12c-0.069,0.002-0.143-0.009-0.219-0.043 l0.964-5.965L23,30.505z"/><path fill="#cfd8dc" d="M29.897,18.196c-0.169-0.22-0.481-0.26-0.701-0.093L16,26c0,0,2.106,5.892,2.427,6.912 c0.322,1.021,0.58,1.045,0.58,1.045l0.964-5.965l9.832-9.096C30.023,18.729,30.064,18.416,29.897,18.196z"/></svg>`;
+      items.push(`${telegramIcon}${this.escapeHtml(contact.telegram)}`);
+    }
+    if (contact.linkedin) {
+      const linkedinIcon = `<svg viewBox="0 0 48 48" style="width: 12px; height: 12px; margin-right: 3px; display: inline-block; vertical-align: -1px;"><path fill="#0288D1" d="M42,37c0,2.762-2.238,5-5,5H11c-2.761,0-5-2.238-5-5V11c0-2.762,2.239-5,5-5h26c2.762,0,5,2.238,5,5V37z"/><path fill="#FFF" d="M12 19H17V36H12zM14.485 17h-.028C12.965 17 12 15.888 12 14.499 12 13.08 12.995 12 14.514 12c1.521 0 2.458 1.08 2.486 2.499C17 15.887 16.035 17 14.485 17zM36 36h-5v-9.099c0-2.198-1.225-3.698-3.192-3.698-1.501 0-2.313 1.012-2.707 1.99C24.957 25.543 25 26.511 25 27v9h-5V19h5v2.616C25.721 20.5 26.85 19 29.738 19c3.578 0 6.261 2.25 6.261 7.274L36 36 36 36z"/></svg>`;
+      items.push(`${linkedinIcon}${this.escapeHtml(contact.linkedin)}`);
+    }
     
-    const isEnglish = languages === 'english';
     const totalYears = Math.floor(yearsOfExperience || 0);
     const yearSuffix = isEnglish ? (totalYears === 1 ? 'year exp' : 'years exp') : '年经验';
     items.push(this.escapeHtml(`${totalYears}${yearSuffix}`));
@@ -258,9 +277,9 @@ export class ResumeGenerator {
       const displayWebsite = contact.website.replace(/^https?:\/\//, '');
       // 确保链接有协议头
       const href = contact.website.startsWith('http') ? contact.website : `https://${contact.website}`;
-      // 使用 SVG 链接图标代替 emoji，解决 Ubuntu 等 Linux 环境下 emoji 渲染问题
-      const linkIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 3px; display: inline-block; vertical-align: -1px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
-      items.push(`${linkIcon}<a href="${this.escapeHtml(href)}" target="_blank" style="color: inherit; text-decoration: underline; text-underline-offset: 2px;">${this.escapeHtml(displayWebsite)}</a>`);
+      // 使用提供的 website 图标
+      const websiteIcon = `<svg viewBox="0 0 128 128" style="width: 12px; height: 12px; margin-right: 3px; display: inline-block; vertical-align: -1px;"><path d="M23.91 104.02c-6.5-6.63-6.5-17.21 0-23.84l18.74-18.74c2.04-2.04 4.72-3.57 7.52-4.33s5.74-.76 8.41-.13c2.8.76 5.48 2.17 7.65 4.21l.25.25c6.63 6.63 6.63 17.21 0 23.84l-18.74 18.74c-6.62 6.63-17.33 6.63-23.83 0m53.03-53.03c-12.36-12.36-32.63-12.36-45 0L13.33 69.73c-12.36 12.36-12.36 32.63 0 45s32.63 12.36 45 0l18.74-18.74c12.23-12.37 12.23-32.63-.13-45" style="fill:#84b0c1"/><path d="M66.86 48.48c3.36-1.69 6.57-.51 6.57-.51-6.94-5.13-14.51-6.59-21.03-6.18-.04.05-.07.1-.11.16-2.86 4.39-3.5 10.19-1.72 15.07 2.68-.66 5.46-.64 8-.03 1.04.28 1.83.55 3.39 1.28.01-.01-.54-7.05 4.9-9.79M46.76 58.46c.13-.97.19-1.95.25-2.93.28-4.22 1-8.42 2.14-12.49.08-.29.16-.6.24-.91-3.09.49-6.12 1.43-8.97 2.83-4.44 5.73-2.98 13.15 2.23 16.49 1.19-1.19 2.59-2.2 4.11-2.99" style="fill:#2f7889"/><path d="M104.09 23.98c6.5 6.63 6.5 17.21 0 23.84L85.35 66.56c-2.04 2.04-4.72 3.57-7.52 4.33s-5.74.76-8.41.13c-2.8-.76-5.48-2.17-7.65-4.21l-.25-.25c-6.63-6.63-6.63-17.21 0-23.84l18.74-18.74c6.62-6.63 17.33-6.63 23.83 0M51.06 77.01c12.36 12.36 32.63 12.36 45 0l18.61-18.74c12.36-12.36 12.36-32.63 0-45s-32.63-12.36-45 0L50.94 32.01c-12.24 12.37-12.24 32.63.12 45" style="fill:#84b0c1"/><path d="M50.45 39.42c.04-.03.08-.07.12-.1.53-.46 1.12-.9 1.81-1.02s1.5.19 1.74.85c.18.49.02 1.03-.15 1.52-2.63 7.95-4.74 18.04-2.18 26.27.25.8.49 1.83-.18 2.33-.39.3-.97.25-1.4.02-4.7-2.54-5.52-9.42-5.74-14.14-.26-5.96 1.39-11.7 5.98-15.73" style="fill:#a8e3f0"/><path d="M71.32 71.34c-.64-.08-1.32-.21-1.32-.21s-.1 4.27-3.51 7.81c-3.78 3.92-7.55 3.82-7.55 3.82 1.99 1.15 5.96 2.34 7.4 2.68l.15-.15c3.83-3.84 5.43-9 4.83-13.95M90.76 61.15l-5.33 5.33c1.33 5.94.97 12.18-1.09 17.94 2.59-.92 5.08-2.19 7.4-3.8 3.83-6.56 2.99-14.31-.98-19.47" style="fill:#2f7889"/><path d="M79.89 70.01c-.63-1.59-1.86-3.2-3.4-3.05-.96.09-2.45.99-2.35 3.74.07 2.13.88 4.21-.28 7-1.7 4.08-1.31 5.18-.9 5.83.45.71 1.28 1.03 2.05 1.02 2.03-.01 3.71-1.87 4.63-3.91 1.49-3.26 1.58-7.29.25-10.63M49.25 108.18c.64-.53 2.3-2.3 3.07-1.18-.28 3.08-2.65 5.59-5.25 7.27-3.2 2.07-6.99 3.29-10.8 3.18-3.16-.09-8.4-1.37-10.24-4.3-1.5-2.38 1.67-2.79 3.43-2.13 6.27 2.39 13.36 2.44 19.79-2.84" style="fill:#a8e3f0"/></svg>`;
+      items.push(`${websiteIcon}<a href="${this.escapeHtml(href)}" target="_blank" style="color: inherit; text-decoration: underline; text-underline-offset: 2px;">${this.escapeHtml(displayWebsite)}</a>`);
     }
     
     // 使用 span 包裹每个项目，便于 CSS 控制换行和分隔符
@@ -724,7 +743,7 @@ export class ResumeGenerator {
     html = html.replace('{{AVATAR}}', this.formatAvatar(data.avatar));
     html = html.replace('{{NAME}}', this.escapeHtml(data.name));
     html = html.replace('{{POSITION}}', this.escapeHtml(data.position));
-    html = html.replace('{{CONTACT_INFO}}', this.formatContactInfo(data.contact, data.yearsOfExperience, data.languages));
+    html = html.replace('{{CONTACT_INFO}}', this.formatContactInfo(data.contact, data.yearsOfExperience, data.languages, data.gender, !!data.avatar));
     html = html.replace('{{YEARS_OF_EXPERIENCE}}', data.yearsOfExperience.toString());
     html = html.replace('{{EDUCATION}}', this.formatEducation(data.education, data.languages));
     html = html.replace('{{PERSONAL_INTRODUCTION}}', this.formatText(data.personalIntroduction));
