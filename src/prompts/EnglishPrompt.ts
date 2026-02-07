@@ -117,11 +117,14 @@ ${(allWorkExperiences || []).map((exp, idx) => {
 ` : 'Actual experience meets requirements. No supplement needed.'}
 
 ### 5. Existing Work Experience (Reshape based on Business Direction)
-**⚠️ CRITICAL: Company names MUST remain unchanged** (keep originals like "${(profile.workExperiences || [])[0]?.company || 'Huya'}").
+**⚠️ CRITICAL: Company Name Handling**: 
+- If the original company name is **already in English**, you MUST preserve it exactly as provided.
+- If the original company name is in **Chinese** (or other languages), you MUST translate it into a professional English equivalent or use its official English brand name (e.g., "北京小米科技有限公司" -> "Xiaomi Technology"). 
+- Do NOT invent or hallucinate new company entities.
 
 ${(profile.workExperiences || []).map((exp, i) => `
 Experience ${i + 1}:
-- Company: ${exp.company} (DO NOT CHANGE)
+- Company: ${exp.company} (Keep if English, translate if Chinese)
 - Original Title: ${exp.jobTitle}
 - Business Direction: ${exp.businessDirection}
 - Work Content: ${exp.workContent || "None"} (Low weight reference: Use only if highly relevant to ${targetTitle}; otherwise IGNORE and regenerate based on target)
@@ -133,7 +136,12 @@ Experience ${i + 1}:
 2. **Sorting**: ${needsSupplement ? `Strictly follow the generated timeline (newest first). Insert supplements in correct chronological spots.` : 'Sort existing experiences reverse-chronologically.'}
 3. **Titles & Seniority**:
    - Strictly follow the SENIORITY GUIDELINES defined above.
-4. **Personal Introduction**: Professional summary in the style of LinkedIn "About" section. First person. 
+4. Personal Introduction: Professional summary in the style of LinkedIn "About" section. First person.
+   - **Structure**: MUST consist of **TWO separate paragraphs**.
+   - **Content Focus**:
+     - **First Paragraph**: 3-4 lines. Focus on technical expertise, industry tenure, and core value proposition (Professional Persona).
+     - **Second Paragraph**: 2 lines. Focus on leadership style, high-level methodology (e.g., data-driven, user-centric), or soft skills/achievements.
+   - **Bolding Requirement**: You MUST include **EXACTLY TWO bold keywords** (using <b> tags) within the Personal Introduction. These should be placed on the most critical skills or achievements that highlight the candidate's core competencies.
    - **Crucial**: DO NOT use decimals for years of experience (e.g., "5.8 years"). Round to integers (e.g., "6 years") or use phrases like "Over 5 years".
 5. **Professional Skills**: 4 categories, 4 items each.
    - **Principle**: Base skills on ${targetTitle} requirements. You may IGNORE user's original skills if irrelevant.
@@ -148,7 +156,11 @@ Experience ${i + 1}:
      * ✅ "Spearheaded 0-to-1 project architecture, driven 200% user growth to 300k DAU."
      * ❌ "Responsible for system optimization." (Too weak)
    - Ensure the user sounds like a **Key Contributor**, not just a participant.
-7. **Formatting**: Use <b> for key metrics (optional); Do NOT use markdown bold like **text** in JSON strings.
+7. **No Abbreviations for Professional Terms**: DO NOT use acronyms or abbreviations followed by parentheses for professional methodologies or concepts (e.g., ❌ Ecosystem-Led Growth (ELG)). Always use the full form: ✅ Ecosystem-Led Growth. This applies to all industry-specific terminology.
+8. **Formatting**: 
+   - **Personal Introduction**: MUST have exactly 2 bold keywords (<b>...</b>).
+   - **Work Experience**: Use <b> for key metrics or results (optional).
+   - **Constraint**: Do NOT use markdown bold like **text** in JSON strings.
 
 ### 7. Output Format (Pure JSON)
 {
@@ -168,16 +180,16 @@ ${(allWorkExperiences || []).map((exp, idx) => {
   }
 }).join('\n')}
     // Output objects:
-    { "company": "[Original Name - DO NOT CHANGE]", "position": "Tailored Title", "startDate": "...", "endDate": "...", "responsibilities": [...] },
+    { "company": "[English Name / Translated]", "position": "Tailored Title", "startDate": "...", "endDate": "...", "responsibilities": [...] },
     { "company": "[Generated Studio Name]", "position": "Generated Title", "startDate": "...", "endDate": "...", "responsibilities": [...] },
     ` : `// Reshaped existing experiences
-    { "company": "[Original Name - DO NOT CHANGE]", "position": "Tailored Title", "startDate": "...", "endDate": "...", "responsibilities": [...] }`}
+    { "company": "[English Name / Translated]", "position": "Tailored Title", "startDate": "...", "endDate": "...", "responsibilities": [...] }`}
   ]
 }
 
 **⚠️ Key Requirements:**
 - **Highest Priority Reminder**: If the user provided an **AI Instruction** ("${profile.aiMessage || 'None'}"), those instructions MUST be satisfied first, even if they contradict general resume tailoring rules.
-- **Company names, start/end dates of EXISTING jobs must be preserved exactly.**
+- **Company Name Handling**: English names must be PRESERVED exactly; Chinese names must be TRANSLATED professionally. Start/end dates of EXISTING jobs must be preserved exactly.
 - Output strictly in **English**.
 `;
 }
