@@ -487,7 +487,7 @@ export class ResumeGenerator {
    * 任何元素的标题如果出现在页面的底部危险区域 (Danger Zone)，
    * 就强制加 margin-top 把它推到下一页。
    */
-  private async applySmartPageBreaks(page: Page, dangerZone: number = 100): Promise<void> {
+  private async applySmartPageBreaks(page: Page, dangerZone: number = 0): Promise<void> {
     try {
       await page.evaluate((PAGE_HEIGHT, DANGER_ZONE) => {
         // const DANGER_ZONE = 100; // Passed as arg
@@ -1051,7 +1051,7 @@ export class ResumeGenerator {
       });
 
       // Step C: Simulation Logic (Reused for Strategy)
-      const simulateLayout = (config: number[], dangerZone = 50) => {
+      const simulateLayout = (config: number[], dangerZone = 0) => {
           const activeBlocks = allBlocks.filter(b => {
                if (b.type === 'job_bullet' || (b.type === 'gap' && b.bulletIndex !== undefined)) {
                    // If it's a bullet OR a gap associated with a bullet

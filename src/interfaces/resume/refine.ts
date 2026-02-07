@@ -116,6 +116,20 @@ router.post('/refine-resume', upload.single('file'), async (req: Request, res: R
         const latestJob = resume_profile.workExperiences[0];
         const targetTitle = latestJob ? (latestJob.jobTitle || "Job Seeker") : "Job Seeker";
 
+        // --- Save to User Profile (New Logic) ---
+        // 自动将提取出的信息更新到用户的简历库中，这样用户之后进入“我的资料”也能看到
+        console.log(`[Refine] Auto-updating user profile for ${userAuth.phoneNumber}`);
+        await usersCol.updateOne(
+            { _id: user._id },
+            { 
+                $set: { 
+                    "resume_profile.zh": resume_profile,
+                    "name": resume_profile.name,
+                    "gender": resume_profile.gender
+                } 
+            }
+        );
+
         const job_data: JobData = {
             _id: `POLISH_${randomUUID()}`,
             title: targetTitle,
