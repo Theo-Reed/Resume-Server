@@ -1250,17 +1250,16 @@ export class ResumeGenerator {
   /**
    * 最终布局校验 (Safety Net)
    */
-  private async validateLayoutResult(page: Page): Promise<void> {
+  private async validateLayoutResult(page: Page): Promise<{ pageCount: number, fillRatio: number }> {
       const quality = await this.assessLayoutQuality(page);
       if (quality.hasOrphans) {
           console.warn(`[Layout Warning] Final PDF may have layout issues: ${quality.details}`);
-          // 在这里您可以选择抛出错误，或者只是记录
-          // throw new Error("Generated resume violates layout constraints: " + quality.details);
       }
       if (quality.fillRatio < 0.15 && quality.pageCount > 1) {
           console.warn(`[Layout Warning] Last page is too empty (${(quality.fillRatio * 100).toFixed(0)}%)`);
       }
       console.log(`[Validation Passed] Final Layout Check OK. Pages: ${quality.pageCount}`);
+      return quality;
   }
 
   /**
@@ -1305,8 +1304,8 @@ export class ResumeGenerator {
       // 实际上，page.content() 拿到的 HTML 里的元素 style="margin-top: xxx" 是生效的。
       // 所以理论上直接 generate PDF 即可。
 
-      // Step 4: 最终校验 (Validation Check - User Requested)
-      await this.validateLayoutResult(page);
+      // Step 4: 最终校验并获取精确页数，防止产生空白页
+      const quality = await this.validateLayoutResult(page);
 
       // 检查头像图片 (保持原有逻辑)
       if (data.avatar) {
@@ -1341,6 +1340,7 @@ export class ResumeGenerator {
       const pdfOptions = {
         format: 'A4' as const,
         printBackground: true,
+        pageRanges: `1-${quality.pageCount}`, // 强制仅打印有内容的页面，彻底消除空白页
       };
 
       if (outputPath) {
