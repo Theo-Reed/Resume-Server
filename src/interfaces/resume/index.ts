@@ -4,7 +4,7 @@ import deleteGeneratedResume from './deleteGeneratedResume';
 import retryGenerateResume from './retryGenerateResume';
 import restoreResume from './restoreResume';
 import generate from './generate';
-import refineResume from './refine';
+import parseResume from './parse';
 
 const router = Router();
 
@@ -13,6 +13,6 @@ router.use(deleteGeneratedResume);
 router.use(retryGenerateResume);
 router.use(restoreResume);
 router.use(generate);
-router.use(refineResume);
+router.use('/resume', parseResume);
 
 export default router;

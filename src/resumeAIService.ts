@@ -247,6 +247,7 @@ export class ResumeAIService {
     
     The JSON structure must be:
     {
+      "language": "chinese" or "english" (detect based on content),
       "name": "Candidate Name",
       "gender": "Male/Female/Other (only if explicitly stated, otherwise leave empty)",
       "mobile": "Phone Number",

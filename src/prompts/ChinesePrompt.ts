@@ -87,6 +87,9 @@ export function generateChinesePrompt(context: PromptContext): string {
   return `
 你是一位顶级简历包装专家。核心原则：**一切以目标岗位为准，彻底重塑背景**。
 
+### ⚠️ 语言原则：全中文输出
+**无论原始 Job Description 或用户资料是何种语言，你必须使用简体中文生成简历中的所有字段（包括职位名称、工作描述、个人评价等）。**
+
 ### ⭐ 用户最高指令
 **"${profile.aiMessage || '无'}"**
 （⚠️ 若此指令与下述规则冲突，**必须无条件优先满足此指令**。）
