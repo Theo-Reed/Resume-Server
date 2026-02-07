@@ -1,48 +1,34 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../../db';
+import { SchemeRepository, UserRepository } from '../../repositories';
 
 const router = Router();
 
-// Used in: pages/me/index.ts
+/**
+ * [Big Tech Architecture] Retrieve membership schemes with business level filtering.
+ */
 router.post('/getMemberSchemes', async (req: Request, res: Response) => {
   try {
-    const db = getDb();
-    
-    // 1. Get raw schemes
-    let schemes = await db.collection('member_schemes')
-      .find({ type: { $ne: 'gift' } }) // 过滤掉新用户赠送方案
-      .toArray();
+    // 1. Data Retrieval
+    const [rawSchemes, openid] = [
+        await SchemeRepository.listPublicSchemes(),
+        req.headers['x-openid'] as string || req.body.openid
+    ];
 
-    // 2. Get User Context (Member Level)
-    const openid = req.headers['x-openid'] as string || req.body.openid;
     let memberLevel = 0;
-    let userScheme = null;
     if (openid) {
-      const user = await db.collection('users').findOne({ openid });
-      if (user && user.membership) {
-        memberLevel = user.membership.level || 0;
-      }
-      
-      // Fetch user's current scheme details specifically (even if hidden/gift)
-      if (memberLevel > 0) {
-        userScheme = await db.collection('member_schemes').findOne({ scheme_id: memberLevel });
-      }
+      const user = await UserRepository.findByOpenidOrId(openid);
+      memberLevel = user?.membership?.level || 0;
     }
 
-    // 3. Filter Logic
-    // Remove hidden schemes
-    schemes = schemes.filter((s:any) => !s.isHidden);
+    // 2. Business Rules Filtering
+    let schemes = rawSchemes.filter((s:any) => !s.isHidden);
     
-    // Rule: Non-members (0) and Trial Members (1) cannot see Top-up (5)
+    // Safety Rule: Non-members and Trial Members cannot see Top-up options
     if (memberLevel <= 1) {
       schemes = schemes.filter((s:any) => s.scheme_id !== 5);
     }
     
-    // 4. Assign Dynamic Features based on Level
-    // IDs: 2=Sprint, 3=Standard, 4=Premium, 5=Topup
-    // Level: 0=Non, 1=Trial, 2=Sprint, 3=Standard, 4=Premium
-    
-    // Feature Sets (Bilingual)
+    // 3. UI/UX Decoration logic
     const filler = { cn: "当前会员等级不变", en: "No change to current level", isDash: true };
     const F = {
         standardBenefits: [
@@ -69,11 +55,6 @@ router.post('/getMemberSchemes', async (req: Request, res: Response) => {
             { cn: "会员专享 额度不浪费", en: "Member Exclusive" },
             { cn: "不限量叠加使用", en: "Unlimited Stacking" },
             filler
-        ],
-        topupEmergency: [
-            { cn: "即刻恢复快速简历生成", en: "Restore Fast Generation" },
-            { cn: "即刻恢复高级算力模型", en: "Restore Advanced Model" },
-            filler
         ]
     };
 
@@ -81,23 +62,30 @@ router.post('/getMemberSchemes', async (req: Request, res: Response) => {
         let feats: {cn:string, en:string, isDash?:boolean}[] = [];
         const sid = s.scheme_id;
 
-        // Scenario 1: Non-Member (0) & Trial (1)
         if (memberLevel <= 1) {
             if (sid === 3 || sid === 2) feats = F.standardBenefits;
             else if (sid === 4) feats = F.premiumBenefits;
-        }
-        // Scenario 2: Sprint (2)
-        else if (memberLevel === 2) {
+        } else if (memberLevel === 2) {
              if (sid === 3) feats = F.upgradeToStandard;
              else if (sid === 4) feats = F.premiumBenefits;
              else if (sid === 2) feats = F.renewal;
              else if (sid === 5) feats = F.topupGeneral;
-        }
-        // Scenario 3: Standard (3)
-        else if (memberLevel === 3) {
+        } else if (memberLevel === 3) {
             if (sid === 4) feats = F.premiumBenefits;
             else if (sid === 3 || sid === 2) feats = F.renewal;
             else if (sid === 5) feats = F.topupGeneral;
+        } else if (memberLevel === 4) {
+            feats = (sid === 5) ? F.topupGeneral : F.renewal;
+        }
+        s.features = feats;
+    });
+
+    res.json({ success: true, result: schemes });
+  } catch (error: any) {
+    console.error('[GetSchemes] Error:', error);
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+}); 
         }
         // Scenario 4: Premium (4)
         else if (memberLevel === 4) {

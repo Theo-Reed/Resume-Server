@@ -1,40 +1,40 @@
 import { Router, Request, Response } from 'express';
-import { ensureUser } from '../../userUtils';
+import { UserRepository } from '../../repositories';
 
 const router = Router();
 
-// Used in: app.ts
+/**
+ * [Big Tech Architecture] Fetch user membership overview.
+ */
 router.post('/checkMemberStatus', async (req: Request, res: Response) => {
   try {
     const openid = req.headers['x-openid'] as string || req.body.openid;
 
-    if (!openid) {
-      return res.status(401).json({ success: false, message: 'Unauthorized: Missing OpenID' });
-    }
+    if (!openid) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-    const user = await ensureUser(openid);
+    const user = await UserRepository.findByOpenidOrId(openid);
     
     if (!user) {
-      return res.status(500).json({ success: false, message: 'User initialization failed' });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     res.json({
       success: true,
       result: {
-        inviteCode: (user as any).inviteCode,
-        hasUsedInviteCode: (user as any).hasUsedInviteCode,
-        isAuthed: !!((user as any).phone || (user as any).phoneNumber),
-        membership: (user as any).membership || {
+        inviteCode: user.inviteCode,
+        hasUsedInviteCode: user.hasUsedInviteCode,
+        isAuthed: !!(user.phone || user.phoneNumber),
+        membership: user.membership || {
           level: 0,
           expire_at: null,
           pts_quota: { limit: 0, used: 0 }
         }
       }
     });
-  } catch (error) {
-    console.error('checkMemberStatus error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+  } catch (error: any) {
+    console.error('[CheckMemberStatus] Error:', error);
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
-});
+}); 
 
 export default router;

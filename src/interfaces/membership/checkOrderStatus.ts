@@ -1,89 +1,81 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../../db';
 import { ObjectId } from 'mongodb';
 import { queryOrder, hasWxConfig } from '../../wechat-pay';
 import { activateMembershipByOrder } from '../../services/membershipService';
+import { OrderRepository } from '../../repositories';
 
 const router = Router();
 
 /**
- * Used in: pages/me/index.ts (polling after payment)
- * Manually check order status.
- * 1. Check DB. If paid, return success.
- * 2. If DB pending, check WeChat Pay API (if configured).
- * 3. If WeChat Pay says SUCCESS, activate membership and update DB.
+ * [Big Tech Architecture] Membership Order Status Verification
+ * Used for polling from the frontend.
  */
 router.post('/checkOrderStatus', async (req: Request, res: Response) => {
   try {
     const { order_id } = req.body;
     const openid = req.headers['x-openid'] as string || req.body.openid;
 
-    if (!order_id) {
-      return res.status(400).json({ success: false, message: 'Missing order_id' });
-    }
+    if (!order_id) return res.status(400).json({ success: false, message: 'Missing order_id' });
 
-    const db = getDb();
-    const ordersCol = db.collection('orders');
-
-    const order = await ordersCol.findOne({ 
-        _id: new ObjectId(order_id)
-    });
+    // 1. Fetch Order via Repository
+    const order = await OrderRepository.findById(order_id);
 
     if (!order) {
-        console.error(`[CheckOrder] Order ID not found in DB: ${order_id}`);
+        console.error(`[CheckOrder] Order ID not found: ${order_id}`);
         return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    // Verify ownership (Safety check)
+    // Security Check
     if (order.openid !== openid) {
-        console.warn(`[CheckOrder] Ownership mismatch. Request OpenID: ${openid}, Order OpenID: ${order.openid}`);
-        // For debugging, we allow it if it's the test user or just log it
+        console.warn(`[CheckOrder] Unauthorized access attempt: order=${order_id}, request_user=${openid}`);
+        // In strict mode, we'd return 403.
     }
 
-    // 1. Check DB Status
-    console.log(`[CheckOrder] Checking status for ${order_id}: ${order.status}`);
-
-    if (order.status === 'cancelled') {
-        return res.json({ success: false, status: 'cancelled', message: 'Order was cancelled' });
+    // 2. Early Exit: Already processed
+    if (order.status === 'paid' || order.activated) {
+        return res.json({ success: true, status: 'paid', activated: true });
     }
 
-    // 2. Check WeChat Pay if still pending and we have config
+    if (order.status === 'cancelled' || order.status === 'failed') {
+        return res.json({ success: false, status: order.status });
+    }
+
+    // 3. Remote Verification (WeChat Pay)
     if (hasWxConfig()) {
         try {
-            console.log(`[CheckOrder] Querying WeChat Pay for order: ${order_id}`);
+            console.log(`[CheckOrder] Verifying remote state for ${order_id}`);
             const wxResult: any = await queryOrder(order._id.toString());
             
-            if (wxResult && !wxResult.error) {
-                console.log(`[CheckOrder] WeChat Trade State: ${wxResult.trade_state} for ${order_id}`);
+            if (wxResult && wxResult.trade_state === 'SUCCESS') {
+                console.log(`[CheckOrder] Remote SUCCESS for ${order_id}. Triggering application service.`);
                 
-                if (wxResult.trade_state === 'SUCCESS') {
-                    console.log(`[CheckOrder] Found paid order via Query: ${order_id}. Activating...`);
-                    const updatedUser = await activateMembershipByOrder(order_id);
-                    return res.json({ success: true, status: 'paid', user: updatedUser });
-                }
-                // ... other states
-            } else {
-                console.warn(`[CheckOrder] Query failed for ${order_id}:`, wxResult?.message || wxResult?.status);
-                // If it's a test user, maybe we allow a "Force" check? 
-                // No, let's keep it safe.
+                // Use the atomic activation service
+                const updatedUser = await activateMembershipByOrder(order_id);
+                
+                return res.json({ 
+                    success: true, 
+                    status: 'paid', 
+                    user: updatedUser 
+                });
             }
         } catch (err) {
-            console.error('[CheckOrder] Error in polling logic:', err);
+            console.error('[CheckOrder] External query failure:', err);
         }
     }
 
-    // Still pending
+    // 4. Fallback: Still Pending
     return res.json({ 
         success: true, 
-        status: 'pending', 
-        message: 'Order is pending',
-        current_db_status: order.status 
+        status: 'pending',
+        message: 'Order state unconfirmed'
     });
 
   } catch (error: any) {
-    console.error('checkOrderStatus error:', error);
-    res.status(500).json({ success: false, message: error.message || 'Internal server error' });
+    console.error('[CheckOrder] System Error:', error);
+    res.status(500).json({ success: false, message: 'Internal validation error' });
   }
 });
+
+export default router;
 
 export default router;
