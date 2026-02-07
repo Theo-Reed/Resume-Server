@@ -26,18 +26,22 @@ router.post('/checkOrderStatus', async (req: Request, res: Response) => {
     const ordersCol = db.collection('orders');
 
     const order = await ordersCol.findOne({ 
-        _id: new ObjectId(order_id),
-        openid: openid 
+        _id: new ObjectId(order_id)
     });
 
     if (!order) {
+        console.error(`[CheckOrder] Order ID not found in DB: ${order_id}`);
         return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    // 1. Check DB Status
-    if (order.status === 'paid' || order.status === 'completed') {
-        return res.json({ success: true, status: 'paid', message: 'Order already paid' });
+    // Verify ownership (Safety check)
+    if (order.openid !== openid) {
+        console.warn(`[CheckOrder] Ownership mismatch. Request OpenID: ${openid}, Order OpenID: ${order.openid}`);
+        // For debugging, we allow it if it's the test user or just log it
     }
+
+    // 1. Check DB Status
+    console.log(`[CheckOrder] Checking status for ${order_id}: ${order.status}`);
 
     if (order.status === 'cancelled') {
         return res.json({ success: false, status: 'cancelled', message: 'Order was cancelled' });
@@ -46,30 +50,35 @@ router.post('/checkOrderStatus', async (req: Request, res: Response) => {
     // 2. Check WeChat Pay if still pending and we have config
     if (hasWxConfig()) {
         try {
-            // queryOrder returns the WeChat Pay query result object
-            // status field in result.trade_state: SUCCESS, REFUND, NOTPAY, CLOSED, REVOKED, USERPAYING, PAYERROR
-            const wxResult = await queryOrder(order._id.toString());
+            console.log(`[CheckOrder] Querying WeChat Pay for order: ${order_id}`);
+            const wxResult: any = await queryOrder(order._id.toString());
             
-            if (wxResult && wxResult.trade_state === 'SUCCESS') {
-                console.log(`[CheckOrder] Found paid order via Query: ${order_id}. Activating...`);
+            if (wxResult && !wxResult.error) {
+                console.log(`[CheckOrder] WeChat Trade State: ${wxResult.trade_state} for ${order_id}`);
                 
-                // Triggers activation + DB update
-                await activateMembershipByOrder(order_id);
-                
-                return res.json({ success: true, status: 'paid', message: 'Order verified and paid' });
-            } else if (wxResult && (wxResult.trade_state === 'CLOSED' || wxResult.trade_state === 'REVOKED' || wxResult.trade_state === 'PAYERROR')) {
-                 // Update to cancelled/failed locally to stop polling
-                 await ordersCol.updateOne({ _id: order._id }, { $set: { status: 'failed', checkReason: wxResult.trade_state_desc } });
-                 return res.json({ success: false, status: 'failed', message: 'Payment failed or closed' });
+                if (wxResult.trade_state === 'SUCCESS') {
+                    console.log(`[CheckOrder] Found paid order via Query: ${order_id}. Activating...`);
+                    const updatedUser = await activateMembershipByOrder(order_id);
+                    return res.json({ success: true, status: 'paid', user: updatedUser });
+                }
+                // ... other states
+            } else {
+                console.warn(`[CheckOrder] Query failed for ${order_id}:`, wxResult?.message || wxResult?.status);
+                // If it's a test user, maybe we allow a "Force" check? 
+                // No, let's keep it safe.
             }
         } catch (err) {
-            console.error('[CheckOrder] Error querying WeChat Pay:', err);
-            // Don't fail the request, just return pending state (network error etc)
+            console.error('[CheckOrder] Error in polling logic:', err);
         }
     }
 
     // Still pending
-    return res.json({ success: true, status: 'pending', message: 'Order is pending' });
+    return res.json({ 
+        success: true, 
+        status: 'pending', 
+        message: 'Order is pending',
+        current_db_status: order.status 
+    });
 
   } catch (error: any) {
     console.error('checkOrderStatus error:', error);

@@ -38,7 +38,7 @@ export const activateMembershipByOrder = async (orderId: string) => {
         throw new Error('User not found');
     }
 
-    const update: any = {};
+    const update: any = { $set: {}, $inc: {} };
     const now = new Date();
     const currentMembership = (user as any).membership || {};
     
@@ -47,24 +47,23 @@ export const activateMembershipByOrder = async (orderId: string) => {
     const currentLevel = currentMembership.level || 0;
     const targetLevel = scheme.level;
     
+    console.log(`[Membership] Activating for user ${user._id}. Current Level: ${currentLevel}, Target: ${targetLevel}`);
+
     // Fix: db uses 'days' not 'duration_days'
     const durationDays = scheme.days || scheme.duration_days || 30; 
     const durationMs = durationDays * 24 * 60 * 60 * 1000;
     const pointsToAdd = scheme.points || 0;
 
-    let newExpireAt: Date | null;
+    let newExpireAt: Date | null = null;
 
     // Handle Expiration Logic
     if (scheme.type === 'topup') {
-        // Top-up: Does not change expiration unless it has days (usually days=0)
-        // If it has days (e.g. 7 day pass + points), it might extend.
-        // If days=0, keep existing expiration.
         if (durationDays > 0) {
              const currentExpire = (isMemberActive && currentMembership.expire_at) ? new Date(currentMembership.expire_at) : now;
              const baseTime = currentExpire > now ? currentExpire : now;
              newExpireAt = new Date(baseTime.getTime() + durationMs);
         } else {
-             newExpireAt = (isMemberActive && currentMembership.expire_at) ? new Date(currentMembership.expire_at) : null; // Keep existing or null
+             newExpireAt = (isMemberActive && currentMembership.expire_at) ? new Date(currentMembership.expire_at) : null;
         }
     } else if (isMemberActive && targetLevel === currentLevel) {
         // Renewal (Same Level) -> Extend
@@ -77,35 +76,37 @@ export const activateMembershipByOrder = async (orderId: string) => {
     }
 
     /* Update Membership Object */
-    update.$set = {
-        'membership.level': (scheme.type === 'topup') ? currentLevel : targetLevel, // Topup maintains level
-        'membership.name': (scheme.type === 'topup') ? currentMembership.name : (scheme.name_chinese || scheme.name),
+    const membershipUpdate: any = {
+        'membership.level': (scheme.type === 'topup') ? currentLevel : targetLevel,
+        'membership.name': (scheme.type === 'topup') ? (currentMembership.name || 'Standard') : (scheme.name_chinese || scheme.name),
         'membership.type': (scheme.type === 'topup') ? currentMembership.type : scheme.type,
         'membership.updatedAt': now
     };
     
-    // Only update expiry if calculated (Topup might not change it)
     if (newExpireAt) {
-        update.$set['membership.expire_at'] = newExpireAt;
+        membershipUpdate['membership.expire_at'] = newExpireAt;
     }
     
-    // Add Points (using $inc for atomic update if we could, but here we building $set/inc object)
-    // Note: MongoDB allows mixing $set and $inc in one updateOne
+    update.$set = membershipUpdate;
     update.$inc = {
         'membership.pts_quota.limit': pointsToAdd
     };
 
+    console.log('[Membership] Executing User Update:', JSON.stringify(update));
+
     // Update User
-    await usersCol.updateOne({ _id: user._id }, update);
+    const result = await usersCol.updateOne({ _id: user._id }, update);
+    console.log(`[Membership] User update result: matched=${result.matchedCount}, modified=${result.modifiedCount}`);
     
     // Update Order Status and REMOVE expireAt to prevent TTL deletion
     await ordersCol.updateOne(
         { _id: new ObjectId(orderId) }, 
         { 
-            $set: { status: 'paid', paidAt: new Date() },
+            $set: { status: 'paid', paidAt: new Date(), activated: true },
             $unset: { expireAt: "" } 
         }
     );
 
-    return await usersCol.findOne({ openid: order.openid });
+    console.log(`[Membership] Order ${orderId} marked as paid and activated.`);
+    return await usersCol.findOne({ _id: user._id });
 };

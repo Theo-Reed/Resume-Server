@@ -167,16 +167,14 @@ export const queryOrder = async (out_trade_no: string) => {
             mchid: process.env.WX_MCHID || ''
         });
         
-        console.log(`[WxPay] Query order result: ${out_trade_no}`, result.status, result.data);
-
         if (result.status === 200 && result.data && result.data.trade_state) {
-            return result.data; // Returns full order info: trade_state, trade_state_desc, etc.
+            return result.data; 
         } else {
-            console.warn('[WxPay] Query order status not 200 or missing data', result);
-            return null;
+            console.warn(`[WxPay] Query order ${out_trade_no} status: ${result.status}`, result.data);
+            return { error: true, status: result.status, data: result.data };
         }
-    } catch (error) {
-        console.error('[WxPay] Query Order Error or Not Found', error);
-        return null;
+    } catch (error: any) {
+        console.error('[WxPay] Query Order Exception:', out_trade_no, error.message);
+        return { error: true, message: error.message };
     }
 }
