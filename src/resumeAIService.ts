@@ -322,4 +322,52 @@ export class ResumeAIService {
       
       return data;
   }
+
+  /**
+   * 从截图/图片中提取职位信息 (JD, Title, Years)
+   */
+  async extractJobInfoFromScreenshot(fileBuffer: Buffer, mimeType: string): Promise<any> {
+    const prompt = `
+    You are an expert Job Description Parser. 
+    Analyze the provided job posting image and extract the following key information into a strictly valid JSON object.
+    
+    The JSON structure must be:
+    {
+      "title": "Job Title (e.g. Senior Frontend Engineer)",
+      "years": 3, // Minimum years of experience required (number). If range "3-5", use 3. If "No experience" or not mentioned, use 0.
+      "description": "Full job description text..."
+    }
+    
+    Rules:
+    1. "title": Extract the main job title. If not found, leave empty string.
+    2. "years": Extract only the minimum required years as a number.
+    3. "description": Extract the full responsibility and requirement text.
+    4. Only return the JSON. No markdown.
+    `;
+
+    try {
+        const parts = [
+            { text: prompt },
+            {
+                inlineData: {
+                    mimeType,
+                    data: fileBuffer.toString('base64')
+                }
+            }
+        ];
+        
+        const result = await this.gemini.generateContentWithParts(parts);
+        let data = this.parseJSON(result);
+        
+        // Normalize
+        if (typeof data.years !== 'number') {
+            data.years = parseInt(data.years) || 0;
+        }
+        
+        return data;
+    } catch (e: any) {
+        console.error("Gemini Job Extraction Failed", e);
+        throw new Error("岗位截图解析失败: " + e.message);
+    }
+  }
 }

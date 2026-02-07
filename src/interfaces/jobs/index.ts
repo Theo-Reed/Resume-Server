@@ -8,6 +8,7 @@ import checkJobSaved from './checkJobSaved';
 import getSavedJobs from './getSavedJobs';
 import batchSaveJobs from './batchSaveJobs';
 import saveCustomJob from './saveCustomJob';
+import parseJobScreenshot from './parse';
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use(checkJobSaved);
 router.use(getSavedJobs);
 router.use(batchSaveJobs);
 router.use(saveCustomJob);
+router.use(parseJobScreenshot);
 
 export default router;
