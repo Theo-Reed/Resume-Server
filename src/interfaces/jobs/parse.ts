@@ -91,8 +91,8 @@ router.post('/parse-job-screenshot', upload.single('file'), async (req: Request,
         if (!result || (result.years === null || result.years === undefined) || !result.description) {
             return res.status(200).json({ 
                 success: false, 
-                message: '识别图片错误', // "Identify Image Error"
-                code: 'INVALID_IMAGE_CONTENT' // Specific code for frontend handling if needed
+                message: '识别图片错误', 
+                code: StatusCode.INVALID_DOCUMENT_CONTENT
             });
         }
 

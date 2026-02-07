@@ -36,7 +36,7 @@ export class GeminiService {
         generationConfig: { maxOutputTokens: 1 }
       });
 
-      await result.response;
+      result.response;
       return { success: true, message: "Gemini 连通性测试通过" };
     } catch (error: any) {
       let errorMsg = error.message || "未知错误";
@@ -80,7 +80,7 @@ export class GeminiService {
         );
 
         const result = await model.generateContent(parts);
-        const response = await result.response;
+        const response = result.response;
         return response.text();
       } catch (error: any) {
         console.warn(`      ⚠️ ${modelName} 视觉任务失败: ${error.message}`);
@@ -117,7 +117,7 @@ export class GeminiService {
           );
 
           const result = await model.generateContent(prompt);
-          const response = await result.response;
+          const response = result.response;
           const text = response.text();
 
           // 执行逻辑校验
@@ -163,8 +163,11 @@ export class GeminiService {
    * @param mimeType 图片类型
    */
   async analyzeImage(prompt: string, imageBuffer: Buffer, mimeType: string): Promise<string> {
-    // 优先调用 2.5 Flash，备选 2.5 Pro
-    const models = ["gemini-2.5-flash", "gemini-2.5-pro"];
+    const models = [
+      "gemini-3-flash-preview",
+      "gemini-3-pro-preview",
+      "gemini-2.5-pro",
+    ];
 
     for (const modelName of models) {
       try {
@@ -185,7 +188,7 @@ export class GeminiService {
           }
         ]);
 
-        const response = await result.response;
+        const response = result.response;
         const text = response.text();
         
         console.log(`   ✅ ${modelName} 图文分析成功`);
