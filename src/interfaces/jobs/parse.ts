@@ -88,7 +88,11 @@ router.post('/parse-job-screenshot', upload.single('file'), async (req: Request,
 
         // Strict Validation (User Requirement)
         // If years or description missing -> Error (User Fault) -> Quota already deducted
-        if (!result || (result.years === null || result.years === undefined) || !result.description) {
+        // Check JD length (must be reasonably detailed, e.g. > 50 chars)
+        const isJdValid = result.description && result.description.length > 50;
+        const isYearsValid = result.years !== null && result.years !== undefined;
+
+        if (!result || !isYearsValid || !isJdValid) {
             return res.status(200).json({ 
                 success: false, 
                 message: '识别图片错误', 

@@ -335,12 +335,12 @@ export class ResumeAIService {
     {
       "title": "Job Title (e.g. Senior Frontend Engineer)",
       "years": 3, // Minimum years of experience required (number). If range "3-5", use 3. If "No experience" or not mentioned, return null (do NOT use 0 unless clearly stated as 'No experience required').
-      "description": "Full job description text..."
+      "description": "Full job description text including responsibilities and requirements."
     }
     
     Rules:
-    1. "title": Extract the main job title. If not found, leave empty string.
-    2. "years": Extract only the minimum required years as a number. If not found or ambiguous, use null. do NOT default to 3.
+    1. "title": Extract the main job title. If exact title is not visible but can be inferred from the description, generate a suitable title. If absolutely no job info is present, leave empty string.
+    2. "years": Extract only the minimum required years as a number. If not found or ambiguous, use null.
     3. "description": Extract the full responsibility and requirement text. If unable to extract text or image is unclear, return empty string.
     4. Only return the JSON. No markdown.
     `;
