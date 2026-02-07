@@ -66,40 +66,55 @@ router.post('/refine-resume', upload.single('file'), async (req: Request, res: R
         console.log(`[Refine] Extracting info from ${file.originalname} (${file.mimetype})...`);
         const extractedData = await services.aiService.extractResumeInfoFromDocument(file.buffer, file.mimetype);
 
+        // --- Identity Info Validation ---
+        // 必须识别到姓名，且至少有一个联系方式 (手机、邮箱或微信)
+        const hasMobile = extractedData.mobile && extractedData.mobile.length > 5;
+        const hasEmail = extractedData.email && extractedData.email.includes('@');
+        const hasWechat = extractedData.wechat && extractedData.wechat.length > 2;
+        
+        if (!extractedData.name || (!hasMobile && !hasEmail && !hasWechat)) {
+            console.warn(`[Refine] Extraction failed: Missing identity info. Name: ${extractedData.name}, Contact: ${hasMobile||hasEmail||hasWechat}`);
+            return res.status(StatusCode.HTTP_FORBIDDEN).json({
+                success: false,
+                code: StatusCode.MISSING_IDENTITY_INFO,
+                message: StatusMessage[StatusCode.MISSING_IDENTITY_INFO]
+            });
+        }
+
         // 2. Map to internal UserResumeProfile
         const resume_profile: any = {
-            name: extractedData.name || 'Candidate',
+            name: extractedData.name || "",
             photo: "", 
-            gender: "保密",
-            birthday: "1990-01",
+            gender: extractedData.gender || "",
+            birthday: extractedData.birthday || "",
             wechat: extractedData.wechat || "",
             email: extractedData.email || "",
             phone: extractedData.mobile || "", 
             educations: (extractedData.education || []).map((e: any) => ({
-                school: e.school,
-                degree: e.degree || "Bachelor",
-                major: e.major || "Computer Science",
-                startDate: e.startTime || "2015-09",
-                endDate: e.endTime || "2019-06",
+                school: e.school || "",
+                degree: e.degree || "",
+                major: e.major || "",
+                startDate: e.startTime || "",
+                endDate: e.endTime || "",
                 description: ""
             })),
             workExperiences: (extractedData.experience || []).map((e: any) => ({
-                company: e.company,
-                jobTitle: e.role,
+                company: e.company || "",
+                jobTitle: e.role || "",
                 businessDirection: "",
-                workContent: e.description,
-                startDate: e.startTime || "2020-01",
-                endDate: e.endTime || "Present"
+                workContent: e.description || "",
+                startDate: e.startTime || "",
+                endDate: e.endTime || ""
             })),
             certificates: [],
             skills: extractedData.skills || [],
             aiMessage: `Optimized from ${file.originalname}`,
-            location: extractedData.city
+            location: extractedData.city || ""
         };
 
         // 3. Construct Dummy Job Data for "Polishing"
         const latestJob = resume_profile.workExperiences[0];
-        const targetTitle = latestJob ? latestJob.jobTitle : "Software Engineer";
+        const targetTitle = latestJob ? (latestJob.jobTitle || "Job Seeker") : "Job Seeker";
 
         const job_data: JobData = {
             _id: `POLISH_${randomUUID()}`,

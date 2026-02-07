@@ -743,7 +743,11 @@ export class ResumeGenerator {
 
     html = html.replace('{{AVATAR}}', this.formatAvatar(data.avatar));
     html = html.replace('{{NAME}}', this.escapeHtml(data.name));
-    html = html.replace('{{POSITION}}', this.escapeHtml(data.position));
+    if (data.position) {
+      html = html.replace('{{POSITION}}', ` - ${this.escapeHtml(data.position)}`);
+    } else {
+      html = html.replace('{{POSITION}}', '');
+    }
     html = html.replace('{{CONTACT_INFO}}', this.formatContactInfo(data.contact, data.yearsOfExperience, data.languages, data.gender, !!data.avatar));
     html = html.replace('{{YEARS_OF_EXPERIENCE}}', data.yearsOfExperience.toString());
     html = html.replace('{{EDUCATION}}', this.formatEducation(data.education, data.languages));

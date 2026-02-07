@@ -248,8 +248,10 @@ export class ResumeAIService {
     The JSON structure must be:
     {
       "name": "Candidate Name",
+      "gender": "Male/Female/Other (only if explicitly stated, otherwise leave empty)",
       "mobile": "Phone Number",
       "email": "Email Address",
+      "wechat": "Wechat ID",
       "city": "Current City",
       "education": [
         { "school": "School Name", "degree": "Degree", "major": "Major", "startTime": "YYYY-MM", "endTime": "YYYY-MM" }
