@@ -19,6 +19,7 @@ export enum StatusCode {
   // Permission errors (40300+)
   FORBIDDEN = 40301,
   QUOTA_EXHAUSTED = 40302,
+  COOLDOWN_ACTIVE = 40303,
   
   // Conflict errors (40900+)
   USER_EXISTS = 40901,
@@ -41,6 +42,7 @@ export const StatusMessage: Record<number, string> = {
   [StatusCode.INVALID_CREDENTIALS]: '手机号或密码错误',
   [StatusCode.FORBIDDEN]: '拒绝访问',
   [StatusCode.QUOTA_EXHAUSTED]: '您的算力点数已耗尽或会员已过期，请前往会员中心充值。',
+  [StatusCode.COOLDOWN_ACTIVE]: '功能冷却中，请稍后再试',
   [StatusCode.USER_EXISTS]: '该手机号已被注册',
   [StatusCode.JOB_ALREADY_SAVED]: '该职位已收藏',
   [StatusCode.INTERNAL_ERROR]: '系统繁忙，请稍后再试',
