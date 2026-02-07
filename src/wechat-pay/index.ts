@@ -62,10 +62,15 @@ export const getMiniProgramPaymentParams = async (
   const client = getWxPayClient();
 
   // Create Unified Order
+  const notifyUrl = process.env.WX_NOTIFY_URL;
+  if (!notifyUrl) {
+      throw new Error("WX_NOTIFY_URL environment variable is not defined");
+  }
+
   const params: IRequestParams = {
     description,
     out_trade_no,
-    notify_url: process.env.WX_NOTIFY_URL || 'https://www.feiwan.online/api/payCallback',
+    notify_url: notifyUrl,
     amount,
     payer: {
       openid,
