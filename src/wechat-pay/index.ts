@@ -126,9 +126,16 @@ export const getMiniProgramPaymentParams = async (
 export const verifyNotification = async (headers: any, bodyVal: any) => {
     const client = getWxPayClient();
     try {
-        // bodyVal could be the raw body string or the parsed object
-        // WeChat V3 verification strictly requires the original raw body string
-        const verifyBody = typeof bodyVal === 'string' ? bodyVal : JSON.stringify(bodyVal);
+        // bodyVal could be: Buffer (raw), string, or object.
+        // V3 verification strictly requires original raw body string.
+        let verifyBody: string;
+        if (Buffer.isBuffer(bodyVal)) {
+            verifyBody = bodyVal.toString('utf8');
+        } else if (typeof bodyVal === 'string') {
+            verifyBody = bodyVal;
+        } else {
+            verifyBody = JSON.stringify(bodyVal);
+        }
 
         await client.verify({
             timestamp: headers['wechatpay-timestamp'],
@@ -138,9 +145,9 @@ export const verifyNotification = async (headers: any, bodyVal: any) => {
             serial: headers['wechatpay-serial'],
         });
         
-        return typeof bodyVal === 'string' ? JSON.parse(bodyVal) : bodyVal;
+        return true;
     } catch (e) {
-        console.error('Verify failed', e);
+        console.error('[WxPay] Verify failed:', e);
         throw e;
     }
 }

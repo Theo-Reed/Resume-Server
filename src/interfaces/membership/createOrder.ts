@@ -27,9 +27,6 @@ router.post('/createOrder', async (req: Request, res: Response) => {
     const user: any = await ensureUser(openid);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     
-    let payAmount = scheme.price;
-    let orderType = scheme.type; // 'sprint', 'standard', 'ultimate', 'topup'
-
     // --- Pricing Logic ---
     const now = new Date();
     const currentMembership = user.membership || {};
@@ -37,12 +34,10 @@ router.post('/createOrder', async (req: Request, res: Response) => {
     const currentLevel = currentMembership.level || 0;
     const targetLevel = scheme.level;
 
-    // Special Logic: Test Users pay 1 cent (0.01 CNY)
-    const testUser = await isTestUser(openid);
-    if (testUser) {
-        payAmount = 1; 
-        orderType = 'test';
-    } else if (scheme.type !== 'topup' && isMemberActive && targetLevel > currentLevel) {
+    let payAmount = scheme.price;
+    let orderType = scheme.type; // 'sprint', 'standard', 'ultimate', 'topup'
+
+    if (scheme.type !== 'topup' && isMemberActive && targetLevel > currentLevel) {
         // Upgrade Logic: Higher level subscription + Currently Active
         orderType = 'upgrade';
         
@@ -54,6 +49,19 @@ router.post('/createOrder', async (req: Request, res: Response) => {
         payAmount = Math.max(1, scheme.price - deduction);
     }
     // Note: Same level or Topup or Expired user pays full price (since they stack or restart)
+
+    // --- Special Gray-scale Test Logic ---
+    // Specifically override amount to 1 cent for internal test user
+    if (openid === 'optpz19PPrkaBFsDFY6Zq3UqufcI') {
+        process.stdout.write(`[GrayScale] Internal test user identified: ${openid}. Overriding amount to 1 cent.\n`);
+        payAmount = 1;
+    } else {
+        const testUser = await isTestUser(openid);
+        if (testUser) {
+            payAmount = 1; 
+            orderType = 'test';
+        }
+    }
 
     // 3. Check for existing UNPAID order for reuse
     const existingOrder = await ordersCol.findOne({

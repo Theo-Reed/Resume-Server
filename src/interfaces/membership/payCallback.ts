@@ -1,40 +1,47 @@
 import { Router, Request, Response } from 'express';
-import { getWxPayClient } from '../../wechat-pay';
+import { verifyNotification, decipherNotification } from '../../wechat-pay';
 import { activateMembershipByOrder } from '../../services/membershipService';
 
 const router = Router();
 
 router.post('/payCallback', async (req: Request, res: Response) => {
   try {
-    const pay = getWxPayClient();
+    console.log('[PayCallback] Received notification');
     
-    // The wechatpay-node-v3 library verification
-    // It requires headers and body (body can be object or string depending on version)
-    const result = await pay.verify_sign(req.headers, req.body);
+    // Use rawBody if available (set in server.ts via express.json verify)
+    // fallen back to req.body if not.
+    const bodyToVerify = (req as any).rawBody || req.body;
     
-    if (!result) {
-      console.error('[PayCallback] Signature verification failed');
-      return res.status(401).json({ code: 'FAIL', message: 'Signature verification failed' });
+    // 1. Verify Signature
+    let decoded: any;
+    try {
+        await verifyNotification(req.headers, bodyToVerify);
+        
+        // 2. Decipher Resource
+        const { resource } = req.body;
+        decoded = decipherNotification(resource);
+    } catch (verifyErr: any) {
+        console.error('[PayCallback] Verification failed:', verifyErr.message);
+        return res.status(401).json({ code: 'FAIL', message: 'Signature verification failed' });
+    }
+    
+    console.log('[PayCallback] Decoded event:', JSON.stringify(decoded));
+
+    // 3. Process Success state
+    if (decoded && (decoded.trade_state === 'SUCCESS' || decoded.event_type === 'TRANSACTION.SUCCESS')) {
+      const order_id = decoded.out_trade_no || (decoded.resource && decoded.resource.out_trade_no);
+      if (order_id) {
+          console.log(`[PayCallback] Payment success for order: ${order_id}. Activating...`);
+          await activateMembershipByOrder(order_id);
+      } else {
+          console.warn('[PayCallback] No out_trade_no found in decoded resource', decoded);
+      }
     }
 
-    // Decrypt resource
-    const { resource } = req.body;
-    const decoded = pay.decipher_gcm(resource.ciphertext, resource.associated_data, resource.nonce);
-    
-    console.log('[PayCallback] Decoded event:', decoded);
-
-    if (decoded.trade_state === 'SUCCESS') {
-      const order_id = decoded.out_trade_no;
-      console.log(`[PayCallback] Payment success for order: ${order_id}`);
-      await activateMembershipByOrder(order_id);
-    }
-
-    // Always return success to WeChat if verification passed
+    // Always return success to WeChat if verification passed to stop retries
     res.json({ code: 'SUCCESS', message: 'OK' });
   } catch (error: any) {
-    console.error('[PayCallback] Error:', error);
-    // Be careful: WeChat will retry if you don't return success
-    res.status(500).json({ code: 'FAIL', message: error.message });
+    console.error('[PayCallback] Internal Error:', error);
   }
 });
 

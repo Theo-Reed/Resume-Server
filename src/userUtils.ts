@@ -186,6 +186,11 @@ export async function getEffectiveOpenid(openid: string): Promise<string> {
  */
 export async function isTestUser(openid: string): Promise<boolean> {
   if (!openid) return false;
+  
+  // 灰度测试用户：硬编码白名单
+  const whiteList = ['optpz19PPrkaBFsDFY6Zq3UqufcI'];
+  if (whiteList.includes(openid)) return true;
+
   const db = getDb();
   const count = await db.collection('test_users').countDocuments({ openid });
   return count > 0;
