@@ -209,9 +209,28 @@ export function mapFrontendRequestToResumeData(payload: GenerateFromFrontendRequ
         degree = degree.replace(/\s*\(全日制\)\s*/g, '').replace(/全日制/g, '').trim();
       }
       
+      let finalDegree = "";
+      if (isEnglish) {
+        // 如果 major 已经包含了学位信息（如 "Bachelor of..."），则不再额外拼接 degree
+        const lowerMajor = edu.major.toLowerCase();
+        const lowerDegree = degree.toLowerCase();
+        
+        // 常见的学位关键词，如果 major 里有这些，通常不需要再拼 degree
+        const degreeKeywords = ['bachelor', 'master', 'ph.d', 'doctor', 'associate', 'diploma', 'degree'];
+        const alreadyHasDegreeInfo = degreeKeywords.some(kw => lowerMajor.includes(kw)) || lowerMajor.includes(lowerDegree);
+
+        if (alreadyHasDegreeInfo) {
+          finalDegree = edu.major;
+        } else {
+          finalDegree = `${edu.major}, ${degree}`;
+        }
+      } else {
+        finalDegree = `${edu.major} ${degree}`;
+      }
+      
       return {
         school: edu.school,
-        degree: isEnglish ? `${edu.major}, ${degree}` : `${edu.major} ${degree}`,
+        degree: finalDegree,
         graduationDate: `${edu.startDate} - ${edu.endDate}`,
         description: edu.description
       };
