@@ -42,7 +42,58 @@ export const activateMembershipByOrder = async (orderId: string) => {
     const now = new Date();
     const currentMembership = (user as any).membership || {};
     
-    /* ... (Logic omitted for brevity) ... */
+    // --- Activate Logic ---
+    const isMemberActive = currentMembership.expire_at && new Date(currentMembership.expire_at) > now;
+    const currentLevel = currentMembership.level || 0;
+    const targetLevel = scheme.level;
+    
+    // Fix: db uses 'days' not 'duration_days'
+    const durationDays = scheme.days || scheme.duration_days || 30; 
+    const durationMs = durationDays * 24 * 60 * 60 * 1000;
+    const pointsToAdd = scheme.points || 0;
+
+    let newExpireAt: Date;
+
+    // Handle Expiration Logic
+    if (scheme.type === 'topup') {
+        // Top-up: Does not change expiration unless it has days (usually days=0)
+        // If it has days (e.g. 7 day pass + points), it might extend.
+        // If days=0, keep existing expiration.
+        if (durationDays > 0) {
+             const currentExpire = (isMemberActive && currentMembership.expire_at) ? new Date(currentMembership.expire_at) : now;
+             const baseTime = currentExpire > now ? currentExpire : now;
+             newExpireAt = new Date(baseTime.getTime() + durationMs);
+        } else {
+             newExpireAt = (isMemberActive && currentMembership.expire_at) ? new Date(currentMembership.expire_at) : null; // Keep existing or null
+        }
+    } else if (isMemberActive && targetLevel === currentLevel) {
+        // Renewal (Same Level) -> Extend
+        const currentExpire = new Date(currentMembership.expire_at);
+        const baseTime = currentExpire > now ? currentExpire : now;
+        newExpireAt = new Date(baseTime.getTime() + durationMs);
+    } else {
+        // New / Upgrade -> Start Fresh from Now
+        newExpireAt = new Date(now.getTime() + durationMs);
+    }
+
+    /* Update Membership Object */
+    update.$set = {
+        'membership.level': (scheme.type === 'topup') ? currentLevel : targetLevel, // Topup maintains level
+        'membership.name': (scheme.type === 'topup') ? currentMembership.name : (scheme.name_chinese || scheme.name),
+        'membership.type': (scheme.type === 'topup') ? currentMembership.type : scheme.type,
+        'membership.updatedAt': now
+    };
+    
+    // Only update expiry if calculated (Topup might not change it)
+    if (newExpireAt) {
+        update.$set['membership.expire_at'] = newExpireAt;
+    }
+    
+    // Add Points (using $inc for atomic update if we could, but here we building $set/inc object)
+    // Note: MongoDB allows mixing $set and $inc in one updateOne
+    update.$inc = {
+        'membership.pts_quota.limit': pointsToAdd
+    };
 
     // Update User
     await usersCol.updateOne({ _id: user._id }, update);
