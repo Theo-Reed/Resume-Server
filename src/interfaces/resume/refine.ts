@@ -84,11 +84,16 @@ router.post('/refine-resume', upload.single('file'), async (req: Request, res: R
                  } else if (consumedType === 'topup') {
                      await usersCol.updateOne({ _id: user._id }, { $inc: { 'membership.topup_quota': 1 } });
                  }
+                 return res.status(500).json({ success: false, message: '系统繁忙，请稍后重试。' });
             } else {
                  console.log(`[Refine] User content error (Invalid Content), quota consumed.`);
+                 // Return 200 with error code so frontend can parse it and show specific modal
+                 return res.status(200).json({ 
+                    success: false, 
+                    code: StatusCode.INVALID_DOCUMENT_CONTENT, 
+                    message: StatusMessage[StatusCode.INVALID_DOCUMENT_CONTENT] 
+                 });
             }
-            
-            return res.status(500).json({ success: false, message: isUserFault ? '未能识别有效简历内容，请检查文件。' : '系统繁忙，请稍后重试。' });
         }
 
         // --- Identity Info Validation ---
