@@ -4,7 +4,7 @@ import { SchemeRepository, UserRepository } from '../../repositories';
 const router = Router();
 
 /**
- * [Big Tech Architecture] Retrieve membership schemes with business level filtering.
+ * Retrieve membership schemes with business level filtering.
  */
 router.post('/getMemberSchemes', async (req: Request, res: Response) => {
   try {

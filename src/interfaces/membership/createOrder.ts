@@ -9,7 +9,7 @@ import { OrderRepository, UserRepository, SchemeRepository, IOrder } from '../..
 const router = Router();
 
 /**
- * [Big Tech Architecture] Membership Order Creation
+ * Membership Order Creation
  * Flow:
  * 1. Validate Input (openid, scheme_id)
  * 2. Retrieve Domain Entities (User, Scheme)

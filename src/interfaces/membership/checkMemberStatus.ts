@@ -4,7 +4,7 @@ import { UserRepository } from '../../repositories';
 const router = Router();
 
 /**
- * [Big Tech Architecture] Fetch user membership overview.
+ * Fetch user membership overview.
  */
 router.post('/checkMemberStatus', async (req: Request, res: Response) => {
   try {

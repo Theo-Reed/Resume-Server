@@ -5,7 +5,7 @@ import { MembershipDomainService } from '../../services/membershipService';
 const router = Router();
 
 /**
- * [Big Tech Architecture] Price calculation before order creation.
+ * Price calculation before order creation.
  * Mirroring the logic in MembershipDomainService.
  */
 router.post('/calculatePrice', async (req: Request, res: Response) => {

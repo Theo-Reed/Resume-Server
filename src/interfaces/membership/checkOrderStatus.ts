@@ -7,7 +7,7 @@ import { OrderRepository } from '../../repositories';
 const router = Router();
 
 /**
- * [Big Tech Architecture] Membership Order Status Verification
+ * Membership Order Status Verification
  * Used for polling from the frontend.
  */
 router.post('/checkOrderStatus', async (req: Request, res: Response) => {

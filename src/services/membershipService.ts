@@ -103,7 +103,7 @@ export const activateMembershipByOrder = async (orderId: string) => {
     console.log(`[MembershipAppService] Processing Activation for Order: ${orderId}`);
 
     // 1. [Atomic Lock]: ACQUIRE ownership of this order
-    // This is the "Big Tech" robust gatekeeper.
+    // Ensure only one worker processes this specific order.
     const order = await OrderRepository.acquirePaidLock(orderId);
 
     // 2. [Idempotency Check]: If lock failed, check if it was already processed
