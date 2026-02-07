@@ -267,6 +267,10 @@ export class ResumeAIService {
     
     If specific fields are missing, leave them as empty strings or empty arrays. 
     Dates should be normalized to YYYY-MM format. 'Present' should be the current date (2026-02).
+    
+    CRITICAL RULES:
+    1. For 'major' (专业名称) in 'education', you MUST use the exact name found in the original document. Do NOT attempt to translate, standardize, or optimize it (e.g., keep "CS" as "CS", don't change to "Computer Science") unless it is clearly an error or garbage data.
+    
     Only return the JSON. No markdown formatting.
     ${text ? `\nResume Content:\n${text}` : ""}
     `;
@@ -313,8 +317,31 @@ export class ResumeAIService {
   private parseResumeJSON(text: string): any {
       const data = this.extractJSON(text);
 
-      // 验证提取内容的有效性 (Resume Specific)
-      // 至少需要有基本的个人信息或经历信息
+      // 1. Merge projects into experience if they exist
+      if (data.projects && Array.isArray(data.projects) && data.projects.length > 0) {
+          if (!data.experience) data.experience = [];
+          
+          data.projects.forEach((proj: any) => {
+              // Ensure we don't duplicate if the AI already put it in experience (rare but possible)
+              const isDuplicate = data.experience.some((exp: any) => 
+                  (exp.company === proj.name || exp.description === proj.description)
+              );
+              
+              if (!isDuplicate) {
+                  data.experience.push({
+                      company: proj.name || '项目经验',
+                      role: proj.role || '项目成员',
+                      startTime: proj.startTime,
+                      endTime: proj.endTime,
+                      description: proj.description
+                  });
+              }
+          });
+          // Empty projects after merging to avoid double usage in frontend if it expects the same fields
+          data.projects = [];
+      }
+
+      // 2. 验证提取内容的有效性 (Resume Specific)
       const hasBasicInfo = (data.name && data.name.length > 0) || (data.mobile && data.mobile.length > 0) || (data.email && data.email.length > 0);
       const hasExperience = data.experience && Array.isArray(data.experience) && data.experience.length > 0;
       const hasEducation = data.education && Array.isArray(data.education) && data.education.length > 0;
