@@ -1047,7 +1047,7 @@ export class ResumeGenerator {
       });
 
       // Step C: Simulation Logic (Reused for Strategy)
-      const simulateLayout = (config: number[], dangerZone = 100) => {
+      const simulateLayout = (config: number[], dangerZone = 50) => {
           const activeBlocks = allBlocks.filter(b => {
                if (b.type === 'job_bullet' || (b.type === 'gap' && b.bulletIndex !== undefined)) {
                    // If it's a bullet OR a gap associated with a bullet
@@ -1066,13 +1066,14 @@ export class ResumeGenerator {
               const blk = activeBlocks[i];
               
               // 孤儿处理逻辑 (Unbreakable Groups):
-              // 如果当前块是工作标题(job_header)，它必须与其下方的第一个小点(job_bullet)在同一页
+              // 关键逻辑：标题必须与其下方的第一个内容块在同一页
               let blockGroupHeight = blk.height;
-              if (blk.type === 'job_header' && i + 1 < activeBlocks.length) {
+              const isTitleLike = blk.type === 'job_header' || blk.label?.includes('标题') || blk.hasDangerZoneRule;
+              
+              if (isTitleLike && i + 1 < activeBlocks.length) {
                   const nextBlk = activeBlocks[i+1];
-                  if (nextBlk.type === 'job_bullet') {
-                      blockGroupHeight += nextBlk.height;
-                  }
+                  // 预测：标题 + 下一个块的总高度
+                  blockGroupHeight += nextBlk.height;
               }
 
               // Danger Zone Logic (Replica of CSS enforcement)
@@ -1165,9 +1166,9 @@ export class ResumeGenerator {
 
       // --- SECOND ROUND: Aggressive Filling (Relaxed Constraints) ---
       // 尝试通过放宽排版约束（如允许标题更靠近底部），进一步利用页面空间（针对 90%+ 填充率的情况）
-      let finalDangerZone = 100; // Default Strict (100px)
+      let finalDangerZone = 50; // Default Strict (50px)
       {
-          const RELAXED_DANGER_ZONE = 60; // 从 100px 放宽到 60px
+          const RELAXED_DANGER_ZONE = 0; // 从 50px 放宽到 0px
           console.log(`[Solver] Round 2: Attempting Aggressive Fill (DangerZone: ${RELAXED_DANGER_ZONE}px)...`);
           
           let changed = true;
@@ -1191,12 +1192,10 @@ export class ResumeGenerator {
 
       // Calculate Final Stats
       const finalSim = simulateLayout(currentConfig, finalDangerZone);
-      const totalAvailable = targetPages * PAGE_HEIGHT;
-      const totalUsed = ((finalSim.pages - 1) * PAGE_HEIGHT) + finalSim.lastPageHeight;
-      const fillPercent = ((totalUsed / totalAvailable) * 100).toFixed(1);
+      const fillPercent = ((finalSim.lastPageHeight / PAGE_HEIGHT) * 100).toFixed(1);
 
       console.log(`3. 最佳填充方案: [${currentConfig}]`);
-      console.log(`4. 总体填充率: ${fillPercent}%`);
+      console.log(`4. 最后一页填充率: ${fillPercent}%`);
       console.log(`=====================\n`);
 
       console.log(`[Solver] Initial Computed Config: [${currentConfig}] for Target Pages: ${targetPages}`);
