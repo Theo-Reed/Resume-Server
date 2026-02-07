@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, Part } from "@google/generative-ai";
 
 /**
  * Gemini 服务类
@@ -57,6 +57,37 @@ export class GeminiService {
         }
       };
     }
+  }
+
+  /**
+   * 多模态/复杂内容生成接口
+   * @param parts 包含文本、图片等混合内容的 Part 数组
+   */
+  async generateContentWithParts(parts: Part[]): Promise<string> {
+    const models = [
+      "gemini-3-flash-preivew",
+      "gemini-3-pro-preview",
+      "gemini-2.5-pro", 
+    ];
+
+    for (const modelName of models) {
+      try {
+        console.log(`   - [Vision] 尝试使用模型: ${modelName}`);
+        const genAI = new GoogleGenerativeAI(this.apiKey);
+        const model = genAI.getGenerativeModel(
+          { model: modelName },
+          { baseUrl: this.baseUrl }
+        );
+
+        const result = await model.generateContent(parts);
+        const response = await result.response;
+        return response.text();
+      } catch (error: any) {
+        console.warn(`      ⚠️ ${modelName} 视觉任务失败: ${error.message}`);
+        // Continue to next model
+      }
+    }
+    throw new Error("所有可用模型均无法完成多模态请求");
   }
 
   /**

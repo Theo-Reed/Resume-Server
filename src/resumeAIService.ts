@@ -3,6 +3,7 @@ import { GenerateFromFrontendRequest, ResumeData, mapFrontendRequestToResumeData
 import { generateChinesePrompt } from "./prompts/ChinesePrompt";
 import { generateEnglishPrompt } from "./prompts/EnglishPrompt";
 import { ExperienceCalculator } from "./utils/experienceCalculator";
+import pdf from 'pdf-parse';
 
 export class ResumeAIService {
   private gemini: GeminiService;
@@ -212,5 +213,91 @@ export class ResumeAIService {
       console.error("AI 增强流程异常:", error.message);
       throw error;
     }
+  }
+
+  /**
+   * 从文档（PDF/Image）中提取简历信息
+   */
+  async extractResumeInfoFromDocument(fileBuffer: Buffer, mimeType: string): Promise<any> {
+    let text = "";
+    let parts: any[] = [];
+
+    if (mimeType === 'application/pdf') {
+       try {
+         const data = await pdf(fileBuffer);
+         text = data.text;
+       } catch (e) {
+         console.error("PDF Parsing failed", e);
+         throw new Error("PDF解析失败");
+       }
+    } else if (mimeType.startsWith('image/')) {
+        parts.push({
+            inlineData: {
+                mimeType,
+                data: fileBuffer.toString('base64')
+            }
+        });
+    } else {
+        throw new Error("不支持的文件类型: " + mimeType);
+    }
+
+    const prompt = `
+    You are an expert Resume Parser. 
+    Analyze the provided resume document (text or image) and extract the candidate's profile information into a strictly valid JSON object.
+    
+    The JSON structure must be:
+    {
+      "name": "Candidate Name",
+      "mobile": "Phone Number",
+      "email": "Email Address",
+      "city": "Current City",
+      "education": [
+        { "school": "School Name", "degree": "Degree", "major": "Major", "startTime": "YYYY-MM", "endTime": "YYYY-MM" }
+      ],
+      "experience": [
+        { "company": "Company Name", "role": "Job Title", "startTime": "YYYY-MM", "endTime": "YYYY-MM", "description": "Summary of responsibilities" }
+      ],
+      "projects": [
+        { "name": "Project Name", "role": "Role", "startTime": "YYYY-MM", "endTime": "YYYY-MM", "description": "Details" }
+      ],
+      "skills": ["Skill 1", "Skill 2"]
+    }
+    
+    If specific fields are missing, leave them as empty strings or empty arrays. 
+    Dates should be normalized to YYYY-MM format. 'Present' should be the current date (2026-02).
+    Only return the JSON. No markdown formatting.
+    ${text ? `\nResume Content:\n${text}` : ""}
+    `;
+
+    try {
+        let result = "";
+        if (text) {
+            // Text-only mode
+            result = await this.gemini.generateContent(prompt);
+        } else {
+            // Vision mode
+            parts.push({ text: prompt });
+            result = await this.gemini.generateContentWithParts(parts);
+        }
+        return this.parseJSON(result);
+    } catch (e: any) {
+        console.error("Gemini Extraction Failed", e);
+        throw new Error("AI 解析简历失败: " + e.message);
+    }
+  }
+
+  private parseJSON(text: string): any {
+      try {
+          // Remove Markdown Code Blocks if present
+          const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+          const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+              return JSON.parse(jsonMatch[0]);
+          }
+          return JSON.parse(cleanText);
+      } catch (e) {
+          console.error("Failed to parse AI JSON response", text);
+          throw new Error("简历解析失败，AI返回格式错误");
+      }
   }
 }
