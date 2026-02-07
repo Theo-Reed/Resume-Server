@@ -5,7 +5,7 @@ const router = Router();
 
 router.post('/getGeneratedResumes', async (req: Request, res: Response) => {
   try {
-    const { jobId, status, limit = 20, skip = 0 } = req.body;
+    const { jobId, status, task_id, limit = 20, skip = 0 } = req.body;
     
     // 使用 JWT 中的手机号
     const phoneNumber = (req as any).user.phoneNumber;
@@ -24,6 +24,9 @@ router.post('/getGeneratedResumes', async (req: Request, res: Response) => {
     }
     if (status) {
         query.status = status;
+    }
+    if (task_id) {
+        query.task_id = task_id;
     }
 
     const total = await collection.countDocuments(query);
