@@ -147,3 +147,24 @@ export const decipherNotification = (resource: any) => {
     
     return client.decipher_gcm(ciphertext, associated_data, nonce, apiv3Key);
 }
+
+export const queryOrder = async (out_trade_no: string) => {
+    const client = getWxPayClient();
+    try {
+        const result = await client.transactions_out_trade_no(out_trade_no, {
+            mchid: process.env.WX_MCHID || ''
+        });
+        
+        console.log(`[WxPay] Query order result: ${out_trade_no}`, result.status, result.data);
+
+        if (result.status === 200 && result.data && result.data.trade_state) {
+            return result.data; // Returns full order info: trade_state, trade_state_desc, etc.
+        } else {
+            console.warn('[WxPay] Query order status not 200 or missing data', result);
+            return null;
+        }
+    } catch (error) {
+        console.error('[WxPay] Query Order Error or Not Found', error);
+        return null;
+    }
+}
