@@ -281,7 +281,7 @@ export class ResumeAIService {
             parts.push({ text: prompt });
             result = await this.gemini.generateContentWithParts(parts);
         }
-        return this.parseJSON(result);
+        return this.parseResumeJSON(result);
     } catch (e: any) {
         console.error("Gemini Extraction Failed", e);
         // 如果自定义错误，直接抛出，否则抛出通用错误
@@ -292,7 +292,7 @@ export class ResumeAIService {
     }
   }
 
-  private parseJSON(text: string): any {
+  private extractJSON(text: string): any {
       let data: any = {};
       try {
           // Remove Markdown Code Blocks if present
@@ -303,12 +303,17 @@ export class ResumeAIService {
           } else {
               data = JSON.parse(cleanText);
           }
+          return data;
       } catch (e) {
           console.error("Failed to parse AI JSON response", text);
-          throw new Error("简历解析失败，AI返回格式错误");
+          throw new Error("解析失败，AI返回格式错误");
       }
+  }
 
-      // 验证提取内容的有效性
+  private parseResumeJSON(text: string): any {
+      const data = this.extractJSON(text);
+
+      // 验证提取内容的有效性 (Resume Specific)
       // 至少需要有基本的个人信息或经历信息
       const hasBasicInfo = (data.name && data.name.length > 0) || (data.mobile && data.mobile.length > 0) || (data.email && data.email.length > 0);
       const hasExperience = data.experience && Array.isArray(data.experience) && data.experience.length > 0;
@@ -357,7 +362,7 @@ export class ResumeAIService {
         ];
         
         const result = await this.gemini.generateContentWithParts(parts);
-        let data = this.parseJSON(result);
+        let data = this.extractJSON(result);
         
         // Normalize
         if (data.years !== null && typeof data.years !== 'number') {
