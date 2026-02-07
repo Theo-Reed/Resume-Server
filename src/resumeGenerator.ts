@@ -1063,6 +1063,7 @@ export class ResumeGenerator {
           });
 
           let currentY = 0;
+          let lastVisibleY = 0; // 仅用于统计可见高度
           let pageNum = 1;
           const DANGER_ZONE = dangerZone; // Adjustable Danger Zone
           
@@ -1091,6 +1092,7 @@ export class ResumeGenerator {
                        // Force Break based on Danger Zone
                        pageNum++;
                        currentY = 0; // New page starts fresh
+                       lastVisibleY = 0;
                        // Note: We ignore the gap before this block because the break consumes the space.
                        // The block adds its height to the new page.
                    }
@@ -1102,11 +1104,17 @@ export class ResumeGenerator {
                   // 强制分页
                   pageNum++;
                   currentY = blk.height; 
+                  lastVisibleY = (blk.type !== 'gap') ? blk.height : 0;
               } else {
                   currentY += blk.height;
+                  // 只有当当前块不是 gap 时，才更新 visibleY 指针
+                  // 这确保了如果页面末尾有一个 margin (gap)，它不会反映在 fillRate 指标中
+                  if (blk.type !== 'gap') {
+                      lastVisibleY = currentY;
+                  }
               }
           }
-          return { pages: pageNum, lastPageHeight: currentY };
+          return { pages: pageNum, lastPageHeight: lastVisibleY };
       };
 
       // --- DEBUG OUTPUT START ---
@@ -1201,9 +1209,11 @@ export class ResumeGenerator {
       // Calculate Final Stats
       const finalSim = simulateLayout(currentConfig, finalDangerZone);
       const fillPercent = ((finalSim.lastPageHeight / PAGE_HEIGHT) * 100).toFixed(1);
+      const remainingPercent = (100 - parseFloat(fillPercent)).toFixed(1);
+      const remainingPx = Math.round(PAGE_HEIGHT - finalSim.lastPageHeight);
 
       console.log(`3. 最佳填充方案: [${currentConfig}]`);
-      console.log(`4. 最后一页填充率: ${fillPercent}% (${Math.round(finalSim.lastPageHeight)}px / ${Math.round(PAGE_HEIGHT)}px)`);
+      console.log(`4. 最后一页剩余率: ${remainingPercent}% (剩余 ${remainingPx}px / 总高 ${Math.round(PAGE_HEIGHT)}px)`);
       console.log(`=====================\n`);
 
       console.log(`[Solver] Initial Computed Config: [${currentConfig}] for Target Pages: ${targetPages}`);
