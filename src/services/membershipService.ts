@@ -16,8 +16,8 @@ export class MembershipDomainService {
         const currentLevel = currentMembership.level || 0;
         const targetLevel = scheme.level;
 
-        // DB Alignment: 'days' takes precedence, fallback to 'duration_days'
-        const durationDays = scheme.days || scheme.duration_days || 30; 
+        // DB Alignment: 'days' takes precedence, then 'duration_days', fallback to 30
+        const durationDays = scheme.days !== undefined ? scheme.days : (scheme.duration_days !== undefined ? scheme.duration_days : 30); 
         const durationMs = durationDays * 24 * 60 * 60 * 1000;
         const pointsToAdd = scheme.points || 0;
 
@@ -40,8 +40,7 @@ export class MembershipDomainService {
                  const baseTime = currentExpire > now ? currentExpire : now;
                  newExpireAt = new Date(baseTime.getTime() + durationMs);
             } else {
-                 // Keep existing expiry
-                 newExpireAt = (isMemberActive && currentMembership.expire_at) ? new Date(currentMembership.expire_at) : null;
+                 newExpireAt = null;
             }
 
         } else if (isMemberActive && targetLevel === currentLevel) {
@@ -65,7 +64,7 @@ export class MembershipDomainService {
                 'membership.name': finalName,
                 'membership.type': finalType,
                 'membership.updatedAt': now,
-                ...(newExpireAt ? { 'membership.expire_at': newExpireAt } : {})
+                ...(newExpireAt !== null && newExpireAt !== undefined ? { 'membership.expire_at': newExpireAt } : {})
             }
         };
     }
