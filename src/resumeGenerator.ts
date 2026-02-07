@@ -1074,10 +1074,13 @@ export class ResumeGenerator {
               let blockGroupHeight = blk.height;
               const isTitleLike = blk.type === 'job_header' || blk.label?.includes('标题') || blk.hasDangerZoneRule;
               
-              if (isTitleLike && i + 1 < activeBlocks.length) {
-                  const nextBlk = activeBlocks[i+1];
-                  // 预测：标题 + 下一个块的总高度
-                  blockGroupHeight += nextBlk.height;
+              if (isTitleLike) {
+                  // Find next non-gap block to ensure title + its first actual item fit together
+                  for (let nextIdx = i + 1; nextIdx < activeBlocks.length; nextIdx++) {
+                      const nextBlk = activeBlocks[nextIdx];
+                      blockGroupHeight += nextBlk.height;
+                      if (nextBlk.type !== 'gap') break; // Stop after first non-gap content
+                  }
               }
 
               // Danger Zone Logic (Replica of CSS enforcement)
@@ -1094,7 +1097,8 @@ export class ResumeGenerator {
               }
 
               // Standard Overflow Check
-              if (currentY + blockGroupHeight > PAGE_HEIGHT) {
+              // Allow a tiny 2px tolerance for fractional heights in simulation
+              if (currentY + blockGroupHeight > PAGE_HEIGHT + 2) {
                   // 强制分页
                   pageNum++;
                   currentY = blk.height; 
@@ -1199,7 +1203,7 @@ export class ResumeGenerator {
       const fillPercent = ((finalSim.lastPageHeight / PAGE_HEIGHT) * 100).toFixed(1);
 
       console.log(`3. 最佳填充方案: [${currentConfig}]`);
-      console.log(`4. 最后一页填充率: ${fillPercent}%`);
+      console.log(`4. 最后一页填充率: ${fillPercent}% (${Math.round(finalSim.lastPageHeight)}px / ${Math.round(PAGE_HEIGHT)}px)`);
       console.log(`=====================\n`);
 
       console.log(`[Solver] Initial Computed Config: [${currentConfig}] for Target Pages: ${targetPages}`);
