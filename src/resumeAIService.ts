@@ -258,10 +258,13 @@ export class ResumeAIService {
         { "school": "School Name", "degree": "Degree", "major": "Major", "startTime": "YYYY-MM", "endTime": "YYYY-MM" }
       ],
       "experience": [
-        { "company": "Company Name", "role": "Job Title", "startTime": "YYYY-MM", "endTime": "YYYY-MM", "description": "Summary of responsibilities" }
-      ],
-      "projects": [
-        { "name": "Project Name", "role": "Role", "startTime": "YYYY-MM", "endTime": "YYYY-MM", "description": "Details" }
+        { 
+          "company": "Company/Project/Organization Name", 
+          "role": "Job Title/Role", 
+          "startTime": "YYYY-MM", 
+          "endTime": "YYYY-MM", 
+          "description": "Summary of responsibilities and achievements" 
+        }
       ],
       "skills": ["Skill 1", "Skill 2"]
     }
@@ -270,7 +273,9 @@ export class ResumeAIService {
     Dates should be normalized to YYYY-MM format. 'Present' should be the current date (2026-02).
     
     CRITICAL RULES:
-    1. For 'major' (专业名称) in 'education', you MUST use the exact name found in the original document. Do NOT attempt to translate, standardize, or optimize it (e.g., keep "CS" as "CS", don't change to "Computer Science") unless it is clearly an error or garbage data.
+    1. Include ALL professional experience in the "experience" array, including full-time jobs, internships, freelance work, research projects, and significant open-source contributions. 
+    2. For project-only entries, use the project name as "company" and your role as "role".
+    3. For 'major' (专业名称) in 'education', you MUST use the exact name found in the original document. Do NOT attempt to translate, standardize, or optimize it (e.g., keep "CS" as "CS", don't change to "Computer Science") unless it is clearly an error or garbage data.
     
     Only return the JSON. No markdown formatting.
     ${text ? `\nResume Content:\n${text}` : ""}
