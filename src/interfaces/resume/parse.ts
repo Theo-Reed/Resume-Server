@@ -63,21 +63,38 @@ router.post('/parse', upload.single('file'), async (req: Request, res: Response)
         }
 
         // 1. Extract Profile
-        console.log(`[Parse] Extracting info from ${file.originalname} (${file.mimetype})...`);
+        console.log(`[Parse] User ${userAuth.phoneNumber} parsing ${file.originalname} (${file.mimetype})...`);
         const extractedData = await services.aiService.extractResumeInfoFromDocument(file.buffer, file.mimetype);
+        
+        console.log(`[Parse] Extraction complete for ${userAuth.phoneNumber}. Detected Name: ${extractedData.name}, Lang: ${extractedData.language}`);
 
         // 2. Identity Info Validation
         const hasMobile = extractedData.mobile && extractedData.mobile.length > 5;
         const hasEmail = extractedData.email && extractedData.email.includes('@');
         const hasWechat = extractedData.wechat && extractedData.wechat.length > 2;
+
+        console.log(`[Parse] Identity check: Name=${!!extractedData.name}, Mobile=${!!hasMobile}, Email=${!!hasEmail}, Wechat=${!!hasWechat}`);
         
         if (!extractedData.name || (!hasMobile && !hasEmail && !hasWechat)) {
+            console.warn(`[Parse] Failed identity validation for ${userAuth.phoneNumber}. Data:`, JSON.stringify(extractedData).substring(0, 500));
             return res.status(StatusCode.HTTP_FORBIDDEN).json({
                 success: false,
                 code: StatusCode.MISSING_IDENTITY_INFO,
                 message: StatusMessage[StatusCode.MISSING_IDENTITY_INFO]
             });
         }
+
+        console.log(`[Parse] Success: ${extractedData.experience?.length || 0} exp, ${extractedData.education?.length || 0} edu.`);
+        
+        // 提炼简历关键信息作为输出
+        const keyInfo = {
+            name: extractedData.name,
+            contact: `${extractedData.mobile || 'N/A'} | ${extractedData.email || 'N/A'}`,
+            latest_edu: extractedData.education?.[0] ? `${extractedData.education[0].school} (${extractedData.education[0].degree})` : 'N/A',
+            latest_exp: extractedData.experience?.[0] ? `${extractedData.experience[0].company} - ${extractedData.experience[0].role}` : 'N/A',
+            skills_count: extractedData.skills?.length || 0
+        };
+        console.log(`[Parse] Key Info Summary:`, JSON.stringify(keyInfo, null, 2));
 
         res.json({
             success: true,

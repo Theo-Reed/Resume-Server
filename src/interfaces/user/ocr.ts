@@ -47,6 +47,16 @@ router.post('/ocr', upload.single('file'), async (req: Request, res: Response) =
         }
 
         console.log(`[OCR] 解析成功: ${extractedData.title} @ ${extractedData.company}`);
+        
+        // 提炼岗位关键信息作为输出
+        const jobKeyInfo = {
+            title: extractedData.title,
+            company: extractedData.company,
+            experience: extractedData.experience || '未提及',
+            content_length: extractedData.content?.length || 0,
+            summary: extractedData.content ? (extractedData.content.substring(0, 100) + '...') : '无内容'
+        };
+        console.log(`[OCR] Job Key Info Summary:`, JSON.stringify(jobKeyInfo, null, 2));
 
         res.json({
             success: true,

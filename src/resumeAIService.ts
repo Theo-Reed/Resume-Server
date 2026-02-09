@@ -280,13 +280,18 @@ export class ResumeAIService {
         let result = "";
         if (text) {
             // Text-only mode
+            console.log(`[AI-Parse] Using Text Mode (${text.length} chars)`);
             result = await this.gemini.generateContent(prompt);
         } else {
             // Vision mode
+            console.log(`[AI-Parse] Using Vision Mode (Image binary size: ${fileBuffer.length} bytes)`);
             parts.push({ text: prompt });
             result = await this.gemini.generateContentWithParts(parts);
         }
-        return this.parseResumeJSON(result);
+
+        console.log(`[AI-Parse] Gemini raw output: ${result.substring(0, 300)}...`);
+        const parsed = this.parseResumeJSON(result);
+        return parsed;
     } catch (e: any) {
         console.error("Gemini Extraction Failed", e);
         // 如果自定义错误，直接抛出，否则抛出通用错误
