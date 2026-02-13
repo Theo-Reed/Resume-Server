@@ -64,10 +64,17 @@ router.post('/parse', upload.single('file'), async (req: Request, res: Response)
 
         if (maxCompleteness >= 45 && lastGenerated > 0 && (now - lastGenerated < cooldownMs)) {
              const remainingMinutes = Math.ceil((cooldownMs - (now - lastGenerated)) / 60000);
-             return res.status(StatusCode.HTTP_FORBIDDEN).json({ 
-                success: false, 
+             // 修改冷却期返回策略：success:true, 但通过 code 提示冷却
+             // 这样前端不会直接走 error 逻辑弹窗，而是可以自行判断 code == COOLDOWN_ACTIVE 并静默打印
+             console.log(`[Parse] Cooldown active for ${user.phone}, ${remainingMinutes}m remaining. Skipping AI generation.`);
+             return res.json({ 
+                success: true, 
                 code: StatusCode.COOLDOWN_ACTIVE,
-                message: `频率限制，请 ${remainingMinutes} 分钟后再试` // Use Chinese as frontend likely expects it or can handle it
+                result: {
+                    skipped: true,
+                    message: `Cool-down active (${remainingMinutes}m)`,
+                    profile: user.resume_profile // 返回旧档案，防止空数据覆盖
+                }
              });
         }
 
