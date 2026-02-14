@@ -70,6 +70,18 @@ export class ExperienceCalculator {
             };
         }).sort((a, b) => a.startUnix - b.startUnix);
 
+        // 实际年限口径：用户第一段工作开始 -> 用户最后一段工作结束（非从毕业算）
+        let actualYears = 0;
+        let actualExperienceText = '0年';
+        let totalMonths = 0;
+        if (existingExps.length > 0) {
+            const firstStart = existingExps[0].startDateNormalized;
+            const lastEnd = existingExps[existingExps.length - 1].endDateNormalized;
+            actualYears = this.calcYears(firstStart, lastEnd);
+            actualExperienceText = `${actualYears}年`;
+            totalMonths = Math.floor(actualYears * 12);
+        }
+
         const supplementSegments: Array<{ startDate: string; endDate: string; years: number }> = [];
         let finalSupplementYears = 0;
 
@@ -174,7 +186,7 @@ export class ExperienceCalculator {
             }
 
             // 3.3 Prepend (Rule 2.3 & 2.4)
-            // Calculate Total Effective Years so far (Earliest Existing Start -> Now)
+            // 按需求口径：若补完空档后，目标年限仍大于“第一段工作开始 -> 今天”的跨度，则从第一段之前补
             const firstExistingStart = new Date(existingExps[0].startUnix);
             const totalSpanMonths = (now.getTime() - firstExistingStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
             const totalSpanYears = totalSpanMonths / 12;
@@ -251,9 +263,9 @@ export class ExperienceCalculator {
         finalSupplementYears = supplementSegments.reduce((acc, cur) => acc + cur.years, 0);
 
         return {
-            actualYears: 0, 
-            actualExperienceText: `${finalTotalYears}年`, 
-            totalMonths: Math.floor(finalTotalYears * 12),
+            actualYears,
+            actualExperienceText,
+            totalMonths,
             requiredExp: this.parseExperienceRequirement(job.experience),
             needsSupplement: supplementSegments.length > 0,
             supplementYears: finalSupplementYears,
