@@ -139,7 +139,10 @@ Experience ${i + 1}:
 2. **Sorting**: ${needsSupplement ? `Strictly follow the generated timeline (newest first). Insert supplements in correct chronological spots.` : 'Sort existing experiences reverse-chronologically.'}
 3. **Titles & Seniority**:
    - Strictly follow the SENIORITY GUIDELINES defined above.
-4. Personal Introduction: Professional summary in the style of LinkedIn "About" section. First person.
+4. Personal Introduction: Professional summary in the style of LinkedIn "About" section. Implied First Person (Third-person limited).
+   - **Writing Style**: **MUST use implied first person (drop the "I" / "My")**. Start sentences with action verbs or adjectives.
+     - ❌ "I am an experienced engineer..." / "My experience includes..."
+     - ✅ "Experienced engineer with..." / "Specializes in..." / "Proven track record of..."
    - **Structure**: MUST consist of **TWO separate paragraphs**.
    - **Content Focus**:
      - **First Paragraph**: 3-4 lines. Focus on technical expertise, industry tenure, and core value proposition (Professional Persona).
