@@ -164,6 +164,16 @@ export class ExperienceCalculator {
                     const eStr = `${gapEnd.getFullYear()}-${String(gapEnd.getMonth() + 1).padStart(2, '0')}`;
                     const y = this.calcYears(sStr, eStr);
                     supplementSegments.push({ startDate: sStr, endDate: eStr, years: y });
+                    console.log('[ExperienceCalculator] supplement-added-middle-gap:', {
+                        between: {
+                            prevJob: `${curr.startDateNormalized} -> ${curr.endDateNormalized}`,
+                            nextJob: `${next.startDateNormalized} -> ${next.endDateNormalized}`,
+                        },
+                        gapStart: sStr,
+                        gapEnd: eStr,
+                        gapMonths: Math.round(gapMonths * 10) / 10,
+                        years: y,
+                    });
                 }
             }
 
@@ -183,6 +193,13 @@ export class ExperienceCalculator {
                 const eStr = nowStr; 
                 const y = this.calcYears(sStr, eStr);
                 supplementSegments.push({ startDate: sStr, endDate: eStr, years: y });
+                console.log('[ExperienceCalculator] supplement-added-trailing-gap:', {
+                    lastJob: `${last.startDateNormalized} -> ${last.endDateNormalized}`,
+                    gapStart: sStr,
+                    gapEnd: eStr,
+                    gapMonths: Math.round(trailingGapMonths * 10) / 10,
+                    years: y,
+                });
             }
 
             // 3.3 Prepend (Rule 2.3 & 2.4)
@@ -240,6 +257,15 @@ export class ExperienceCalculator {
                 }
             }
         }
+
+        console.log('[ExperienceCalculator] supplement-segments-summary:', {
+            count: supplementSegments.length,
+            segments: supplementSegments.map(seg => ({
+                start: seg.startDate,
+                end: seg.endDate,
+                years: seg.years,
+            })),
+        });
 
         // 4. Build Result
         const allWorkExperiences: Array<{ startDate: string; endDate: string; type: 'existing' | 'supplement'; index?: number }> = [];
