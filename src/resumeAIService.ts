@@ -150,15 +150,17 @@ export class ResumeAIService {
             }
           }
 
-          // 3. 数量强制校验 (仅限中文，确保素材充足以供裁剪)
+          // 3. 数量强制校验
+          // 校验工作经历职责数量 (中英文都必须为 8，确保后续裁剪素材充足)
+          const hasWrongResponsibilityCount = data.workExperience.some((exp: any) => 
+             !exp.responsibilities || exp.responsibilities.length !== 8
+          );
+          if (hasWrongResponsibilityCount) {
+            throw new Error("AI 生成的工作职责数量不足 8 条，触发重试");
+          }
+
+          // 其余素材密度校验仅限中文
           if (!isEnglish) {
-            // 校验工作经历职责数量 (必须为 8)
-            const hasWrongResponsibilityCount = data.workExperience.some((exp: any) => 
-               !exp.responsibilities || exp.responsibilities.length !== 8
-            );
-            if (hasWrongResponsibilityCount) {
-              throw new Error("AI 生成的工作职责数量不足 8 条，触发重试");
-            }
 
             // 校验技能分类数量 (必须为 4)
             if (data.professionalSkills.length !== 4) {

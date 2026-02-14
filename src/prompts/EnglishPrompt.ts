@@ -158,7 +158,7 @@ Experience ${i + 1}:
 5. **Professional Skills**: 4 categories, 4 items each.
    - **Principle**: Base skills on ${targetTitle} requirements. You may IGNORE user's original skills if irrelevant.
 6. **Responsibility Description (Crucial)**:
-   - **Quantity**: MUST generate **EXACTLY 6 bullets** per role.
+  - **Quantity**: MUST generate **EXACTLY 8 bullets** per role.
    - **Ordering**: Sort by importance (highest impact/results first).
    - **Start with STRONG ACTION VERBS** (e.g., Spearheaded, Orchestrated, Engineered, Analyzed, Revamped). 
    - **Avoid Weak Verbs**: Avoid "Responsible for", "Helped with", "Assisted".
