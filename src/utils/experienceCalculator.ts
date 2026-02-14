@@ -188,12 +188,21 @@ export class ExperienceCalculator {
             // 3.3 Prepend (Rule 2.3 & 2.4)
             // 按需求口径：若补完空档后，目标年限仍大于“第一段工作开始 -> 今天”的跨度，则从第一段之前补
             const firstExistingStart = new Date(existingExps[0].startUnix);
-            const totalSpanMonths = (now.getTime() - firstExistingStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
-            const totalSpanYears = totalSpanMonths / 12;
+            const firstExistingStartStr = `${firstExistingStart.getFullYear()}-${String(firstExistingStart.getMonth() + 1).padStart(2, '0')}`;
+            const totalSpanYears = this.calcYears(firstExistingStartStr, nowStr);
 
             const reqMin = this.parseExperienceRequirement(job.experience).min || 0;
 
-            if (totalSpanYears < reqMin && reqMin > 0) {
+            console.log('[ExperienceCalculator] prepend-check:', {
+                reqMin,
+                firstExistingStart: firstExistingStartStr,
+                now: nowStr,
+                totalSpanYears,
+                threshold: reqMin > 0 ? reqMin - 0.05 : reqMin,
+                willPrepend: reqMin > 0 && totalSpanYears + 0.05 < reqMin,
+            });
+
+            if (reqMin > 0 && totalSpanYears + 0.05 < reqMin) {
                 // Rule 2.3: Need to prepend
                 const missingYears = reqMin - totalSpanYears;
                 
@@ -216,6 +225,18 @@ export class ExperienceCalculator {
                     const eStr = `${prependEnd.getFullYear()}-${String(prependEnd.getMonth() + 1).padStart(2, '0')}`;
                     const y = this.calcYears(sStr, eStr);
                     supplementSegments.push({ startDate: sStr, endDate: eStr, years: y });
+                    console.log('[ExperienceCalculator] prepend-added:', {
+                        start: sStr,
+                        end: eStr,
+                        years: y,
+                        missingYears,
+                    });
+                } else {
+                    console.log('[ExperienceCalculator] prepend-skipped-invalid-range:', {
+                        prependStart: `${prependStart.getFullYear()}-${String(prependStart.getMonth() + 1).padStart(2, '0')}`,
+                        prependEnd: `${prependEnd.getFullYear()}-${String(prependEnd.getMonth() + 1).padStart(2, '0')}`,
+                        careerConstraintDate,
+                    });
                 }
             }
         }
