@@ -311,10 +311,10 @@
             position: relative;
             line-height: 1.7;
             text-align: left;
-            word-break: keep-all; /* 优先避免英文单词被截断 */
-            word-wrap: break-word; /* 兼容旧属性 */
-            overflow-wrap: break-word; /* 超长连续字符兜底换行 */
-            hyphens: none;
+            white-space: normal;
+            word-break: normal; /* 正常按空格/标点换行 */
+            overflow-wrap: anywhere; /* 仅在超长连续字符时兜底，避免视觉截断 */
+            hyphens: auto;
         }
         
         .responsibility-item::before {

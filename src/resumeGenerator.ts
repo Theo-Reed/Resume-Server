@@ -409,7 +409,7 @@ export class ResumeGenerator {
           html += visibleResponsibilities
             .map((resp, index) => {
                 const priorityClass = index < 4 ? 'priority-high' : 'priority-low';
-                return `<div class="responsibility-item ${priorityClass}" data-priority="${index}" data-job-index="${jobIndex}" data-bullet-index="${index}">${this.formatText(resp)}</div>`;
+                return `<div class="responsibility-item ${priorityClass}" style="white-space: normal; word-break: normal; overflow-wrap: anywhere;" data-priority="${index}" data-job-index="${jobIndex}" data-bullet-index="${index}">${this.formatText(resp)}</div>`;
             })
             .join('');
           html += '</div>';
