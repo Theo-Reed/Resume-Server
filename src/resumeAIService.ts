@@ -56,6 +56,59 @@ export class ResumeAIService {
       return false;
     };
 
+    const buildExpKey = (company: string, startDate: string, endDate: string): string =>
+      `${(company || '').trim()}|${(startDate || '').trim()}|${(endDate || '').trim()}`;
+
+    const normalizeTitleForCompare = (title: string): string =>
+      (title || '')
+        .toLowerCase()
+        .replace(/[\s\-_/.,，。()（）\[\]【】]/g, '')
+        .trim();
+
+    const detectRoleTracks = (title: string): Set<string> => {
+      const normalized = (title || '').toLowerCase();
+      const tracks = new Set<string>();
+
+      const rules: Array<{ track: string; pattern: RegExp }> = [
+        { track: 'backend', pattern: /后端|后台|backend|server|java|golang|go\b|python|php|\.net|c#|node|api|微服务|分布式/ },
+        { track: 'frontend', pattern: /前端|frontend|react|vue|angular|javascript|typescript|h5|小程序/ },
+        { track: 'mobile', pattern: /android|ios|移动端|客户端|flutter|react native|rn\b|鸿蒙/ },
+        { track: 'data', pattern: /数据|data|bi\b|etl|数仓|算法|analyst|algorithm|machine learning|ml\b|ai\b/ },
+        { track: 'product', pattern: /产品|product manager|product owner|pm\b/ },
+        { track: 'design', pattern: /设计|designer|ui\b|ux\b/ },
+        { track: 'operation', pattern: /运营|operation|ops\b|增长|growth|新媒体/ },
+        { track: 'marketing', pattern: /市场|marketing|投放|广告|品牌/ },
+        { track: 'sales', pattern: /销售|商务|bd\b|business development|account manager|客户经理/ },
+        { track: 'hr', pattern: /人事|hr\b|recruit|招聘/ },
+        { track: 'finance', pattern: /财务|会计|finance|accounting|审计|税务/ },
+        { track: 'legal', pattern: /法务|legal|compliance|合规|风控/ },
+      ];
+
+      rules.forEach(({ track, pattern }) => {
+        if (pattern.test(normalized)) tracks.add(track);
+      });
+
+      return tracks;
+    };
+
+    const isFunctionallyCloseTitle = (originalTitle: string, target: string): boolean => {
+      const originalNorm = normalizeTitleForCompare(originalTitle);
+      const targetNorm = normalizeTitleForCompare(target);
+      if (!originalNorm || !targetNorm) return false;
+      if (originalNorm === targetNorm || originalNorm.includes(targetNorm) || targetNorm.includes(originalNorm)) {
+        return true;
+      }
+
+      const originalTracks = detectRoleTracks(originalTitle);
+      const targetTracks = detectRoleTracks(target);
+      if (originalTracks.size === 0 || targetTracks.size === 0) return false;
+
+      for (const track of originalTracks) {
+        if (targetTracks.has(track)) return true;
+      }
+      return false;
+    };
+
     // 直接取值，清洗逻辑完全交给 Prompt 处理
     const targetTitle = isEnglish 
       ? (job.title_english || job.title_chinese) 
@@ -158,6 +211,26 @@ export class ResumeAIService {
           if (invalidSkeleton) {
             throw new Error('workExperience 骨架字段不完整');
           }
+
+          const existingMap = new Map<string, { jobTitle: string }>();
+          (profile.workExperiences || []).forEach((exp: any) => {
+            const key = buildExpKey(exp.company, exp.startDate, exp.endDate);
+            existingMap.set(key, { jobTitle: exp.jobTitle || '' });
+          });
+
+          data.workExperience.forEach((exp: any, idx: number) => {
+            const key = buildExpKey(exp.company, exp.startDate, exp.endDate);
+            const original = existingMap.get(key);
+            if (!original?.jobTitle) return;
+
+            if (isFunctionallyCloseTitle(original.jobTitle, targetTitle)) {
+              const generatedTitleNorm = normalizeTitleForCompare(exp.position || '');
+              const originalTitleNorm = normalizeTitleForCompare(original.jobTitle || '');
+              if (generatedTitleNorm !== originalTitleNorm) {
+                console.warn(`同赛道岗位名未保留（index=${idx}, original=${original.jobTitle}, generated=${exp.position}），仅记录不触发重试`);
+              }
+            }
+          });
 
           if (!needsSupplement) {
             const existingCount = (profile.workExperiences || []).length;

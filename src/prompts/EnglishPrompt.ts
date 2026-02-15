@@ -303,6 +303,11 @@ For each existing experience, perform this decision in order:
 3. Only when clearly cross-function mismatch, renaming is allowed.
 4. Final self-check before output: if any functionally-close existing title was renamed, rewrite internally and fix before emitting JSON.
 
+Hard examples (must follow):
+- Target role ".NET Developer", original title "Java Developer" => same backend track, must keep "Java Developer" (do NOT rename to .NET).
+- Target role "Backend Engineer", original title "Golang Engineer" => same backend track, must keep original title.
+- Target role "Backend Engineer", original title "Product Manager" => cross-function mismatch, renaming is allowed.
+
 ### Output JSON template
 {
   "position": "...",
