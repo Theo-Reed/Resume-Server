@@ -284,9 +284,13 @@ ${existingExpText || 'None'}
 3. Responsibilities are forbidden in this phase: each responsibilities must be [].
 4. Position naming must follow old constraints:
   - concise professional title (ideally 3-4 words, <40 chars), remove suffixes/brackets/recruitment tokens.
+  - The brevity constraint applies to resume-header position and to supplemental/renamed roles only.
+  - For existing roles that are functionally close to the target track, preserve original title text even if it is longer than brevity guidance.
   - avoid direct job-ad style naming; keep resume-header style.
   - [HIGHEST-PRIORITY HARD GATE] if existing title is functionally close, preserve it (at most minimal normalization); even if other naming rules conflict, do not rename.
   - rename is allowed only on clear cross-function mismatch.
+  - For existing titles like “Tech Lead / Technical Lead / Engineering Lead” in the same tech track, do not downgrade or homogenize to generic target titles (e.g., “Backend Developer”).
+  - For existing and strongly-related roles, use the original user input (title/business direction/work content) as the expansion base; improve depth and metrics, but do not replace the narrative with a different function.
 5. Company name handling must follow old constraints:
   - if original company name is already English, preserve exactly.
   - if original company name is Chinese, translate to professional English / official brand naming.
@@ -340,6 +344,20 @@ export function generateEnglishJobBulletPrompt(
   const lines = workExperiences.map((exp, idx) => `
 - Experience ${idx + 1}: ${exp.company} | ${exp.position} | ${exp.startDate} to ${exp.endDate}`).join('');
 
+  const anchors = workExperiences.map((exp, idx) => {
+    const original = (context.profile.workExperiences || []).find((item: any) => {
+      return String(item?.startDate || '').trim() === String(exp.startDate || '').trim()
+        && String(item?.endDate || '').trim() === String(exp.endDate || '').trim()
+        && String(item?.company || '').trim() === String(exp.company || '').trim();
+    });
+
+    if (!original) {
+      return `- Experience ${idx + 1} source anchor: none (likely supplemental role)`;
+    }
+
+    return `- Experience ${idx + 1} source anchor: originalTitle=${original.jobTitle || 'N/A'} | businessDirection=${original.businessDirection || 'N/A'} | originalWorkContent=${original.workContent || 'N/A'}`;
+  }).join('\n');
+
   return `
 You are a world-class resume writer. This is Phase 2 (Job Bullet): generate only responsibilities.
 
@@ -352,10 +370,17 @@ You are a world-class resume writer. This is Phase 2 (Job Bullet): generate only
 The company / position / startDate / endDate below are finalized. Do not modify them:
 ${lines}
 
+### Original source anchors (must be used for related-role expansion)
+${anchors}
+
 ### Strict requirements
 1. Return workExperience in the same order and same count as input.
 2. Generate exactly 8 responsibilities for each role.
 3. Responsibilities must be impact-first, quantified where possible, and tailored to ${context.targetTitle}.
+3.1 For existing experiences that are strongly related to the target track (e.g., Backend Engineer, Java/Golang/Python backend roles, Tech Lead/Technical Lead):
+  - Expand from original source anchors (original title, business direction, work content) rather than replacing with a new function narrative.
+  - Keep the same role semantics and strengthen with clearer ownership, architecture depth, and quantified outcomes.
+  - If original content includes leadership/technical-leading signals, preserve that leadership level and do not downgrade to an individual-contributor-only narrative.
 4. Use strong action verbs; avoid weak phrasing like “Responsible for” or “Helped with”.
 5. Follow STAR logic and keep each bullet outcome-oriented.
 6. Bolding rule per role: first bullet must contain exactly one <b> segment; among remaining bullets, exactly two bullets each contain one <b> segment (total 3 bullets with <b> per role).

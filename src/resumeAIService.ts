@@ -188,6 +188,7 @@ export class ResumeAIService {
       });
 
       const nonJobData = parseAIJson(nonJobResponse);
+
       const workSkeleton: BulletPhaseWorkExperience[] = (nonJobData.workExperience || []).map((exp: any) => ({
         company: exp.company,
         position: exp.position,

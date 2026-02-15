@@ -302,11 +302,14 @@ ${existingExpText || '无'}
 2. workExperience 每条必须包含 company、position、startDate、endDate。
 3. 本阶段严禁生成职责正文：每条 responsibilities 必须是空数组 []。
 4. **职位标准化（与旧版一致）**：
-  - 所有职位名称（position 及 workExperience.position）控制在 9 字以内。
+  - 简历抬头 position 控制在 9 字以内；workExperience.position 的 9 字限制仅适用于“补充经历”或“跨职能改写后的经历”。
+  - 对“现有经历且同赛道”的岗位名，必须优先保留原文，不受 9 字限制，不得因为长度/命名美化而改名。
   - 必须去掉括号内容、破折号、招聘术语，避免宽泛通用称呼。
   - 必须体现具体职能属性（例如“后端开发”“新媒体运营”“财务会计”）。
   - 【最高优先级硬性规则】在职能高度接近时，必须保留原岗位名，仅允许最小规范化；即使与其他命名规则冲突，也不得改名。
   - 仅在明显跨职能不匹配时才允许改写岗位名。
+  - 对原岗位为“Tech Lead/技术负责人/研发负责人”等技术管理称谓且与目标岗位同赛道时，必须原样保留（或仅极小规范化），禁止降级同化为目标岗通用名称。
+  - 对“现有且强相关（同赛道）”经历，必须以用户原始输入为扩展基底：保留原岗位语义与业务方向，在此基础上补充更强的数据化成果与高阶职责，禁止整段改写为另一岗位叙事。
 5. personalIntroduction 仅两段，必须省略主语，避免“我/本人/该候选人”；不得出现小数年限。
 6. personalIntroduction 点数区间（视觉字数点数：中文1，英数0.5）：
   - 第一段：${Math.floor((maxCharPerLine || 44) * 2.7)} 到 ${Math.floor((maxCharPerLine || 44) * 3.1)}
@@ -359,6 +362,20 @@ export function generateChineseJobBulletPrompt(
   const lines = workExperiences.map((exp, idx) => `
 - 经历${idx + 1}：${exp.company} | ${exp.position} | ${exp.startDate} 至 ${exp.endDate}`).join('');
 
+  const anchors = workExperiences.map((exp, idx) => {
+    const original = (context.profile.workExperiences || []).find((item: any) => {
+      return String(item?.startDate || '').trim() === String(exp.startDate || '').trim()
+        && String(item?.endDate || '').trim() === String(exp.endDate || '').trim()
+        && String(item?.company || '').trim() === String(exp.company || '').trim();
+    });
+
+    if (!original) {
+      return `- 经历${idx + 1}原始锚点：无（可能为补充经历）`;
+    }
+
+    return `- 经历${idx + 1}原始锚点：原职位=${original.jobTitle || '无'} | 业务方向=${original.businessDirection || '无'} | 原始工作内容=${original.workContent || '无'}`;
+  }).join('\n');
+
   return `
 你是一位顶级简历写作专家。当前是 Phase 2（Job Bullet）：仅生成工作经历职责正文。不得改动骨架。
 
@@ -371,10 +388,17 @@ export function generateChineseJobBulletPrompt(
 以下经历的 company / position / startDate / endDate 均已定稿，严禁修改：
 ${lines}
 
+### 现有经历原始输入锚点（用于“基于原输入扩展”）
+${anchors}
+
 ### 生成要求（严格）
 1. 按原顺序返回 workExperience，条目数量必须与输入一致。
 2. 每段经历必须生成且仅生成 8 条 responsibilities。
 3. 每条职责必须围绕目标岗位，按重要性排序，采用 STAR 思路并包含可量化结果。
+3.1 对“现有且强相关（同赛道）”经历（例如：后端开发、Java/Golang/Python后端、Tech Lead/技术负责人）：
+  - 必须以原始锚点中的职位语义、业务方向、既有工作内容为基础进行扩展；
+  - 允许增强表达与补充量化结果，但禁止改写成另一职能叙事；
+  - 若原始内容出现技术领导职责（架构决策、技术评审、带队推进等），扩展后必须保留对应领导属性，不得降级为纯执行岗。
 4. 禁止空泛表达（如“大幅提升/显著优化”但无数字证据）。
 5. 每条职责视觉字数点数（中文1，英数0.5）目标区间：${Math.floor((context.maxCharPerLine || 42) * 1.85)} ~ ${Math.floor((context.maxCharPerLine || 42) * 2.15)}。
 6. 每段第 1 条职责必须含 1 处 <b> 关键词；其余条目中再选 2 条各含 1 处 <b>（每段共 3 条含加粗）。
